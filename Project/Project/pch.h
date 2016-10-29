@@ -13,3 +13,6 @@
 #include <memory>
 #include <agile.h>
 #include <concrt.h>
+#include <fstream>
+#include <string>
+#include <sstream>

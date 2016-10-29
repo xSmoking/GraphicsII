@@ -12,6 +12,7 @@ namespace DX11UWA
 	{
 	public:
 		Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources);
+		void LoadObject(const char* fileName);
 		void CreateDeviceDependentResources(void);
 		void CreateWindowSizeDependentResources(void);
 		void ReleaseDeviceDependentResources(void);
@@ -30,6 +31,8 @@ namespace DX11UWA
 
 	private:
 		void Rotate(float radians);
+		void Static(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 pos);
+		void Orbit(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 radians, DirectX::XMFLOAT3 orbitpos, DirectX::XMFLOAT3 orbitness);
 		void UpdateCamera(DX::StepTimer const& timer, float const moveSpd, float const rotSpd);
 
 	private:

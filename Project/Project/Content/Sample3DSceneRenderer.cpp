@@ -1,5 +1,4 @@
 ﻿#include "pch.h"
-#include <fstream>
 #include "Sample3DSceneRenderer.h"
 
 #include "..\Common\DirectXHelper.h"
@@ -64,15 +63,47 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources(void)
 	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixLookAtLH(eye, at, up)));
 }
 
+XMFLOAT4 MatrixByVector(XMFLOAT4X4 matrix, XMFLOAT4 vector)
+{
+	XMFLOAT4 out;
+	out.x = matrix._11 * vector.x + matrix._12 * vector.y + matrix._13 * vector.z + matrix._14 * vector.w;
+	out.y = matrix._21 * vector.x + matrix._22 * vector.y + matrix._23 * vector.z + matrix._24 * vector.w;
+	out.z = matrix._31 * vector.x + matrix._32 * vector.y + matrix._33 * vector.z + matrix._34 * vector.w;
+	out.w = matrix._41 * vector.x + matrix._42 * vector.y + matrix._43 * vector.z + matrix._44 * vector.w;
+	return out;
+}
+
+XMFLOAT4 MatrixByVector(XMFLOAT4X4 matrix, XMFLOAT3 vector)
+{
+	XMFLOAT4 out;
+	out.x = matrix._11 * vector.x + matrix._12 * vector.y + matrix._13 * vector.z;
+	out.y = matrix._21 * vector.x + matrix._22 * vector.y + matrix._23 * vector.z;
+	out.z = matrix._31 * vector.x + matrix._32 * vector.y + matrix._33 * vector.z;
+	return out;
+}
+
+XMFLOAT4 LookAt(XMFLOAT4 position, XMFLOAT4 look)
+{
+	XMFLOAT4 out;
+	out.x = look.x - position.x;
+	out.y = look.y - position.y;
+	out.z = look.z - position.z;
+	out.w = look.w - position.w;
+	return out;
+}
+
 // Called once per frame, rotates the cube and calculates the model and view matrices.
 void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 {
+	float Oradians = 1;
 	if (!m_tracking)
 	{
 		// Convert degrees to radians, then convert seconds to rotation angle
 		float radiansPerSecond = XMConvertToRadians(m_degreesPerSecond);
 		double totalRotation = timer.GetTotalSeconds() * radiansPerSecond;
 		float radians = static_cast<float>(fmod(totalRotation, XM_2PI));
+		//Oradians = radians;
+		//Orbit(m_constantBufferData, XMFLOAT3(0, 0, radians), XMFLOAT3(0, 0, 0), XMFLOAT3(3, 8, 0));
 
 		Rotate(radians);
 	}
@@ -87,6 +118,18 @@ void Sample3DSceneRenderer::Rotate(float radians)
 {
 	// Prepare to pass the updated model matrix to the shader
 	XMStoreFloat4x4(&m_constantBufferData.model, XMMatrixTranspose(XMMatrixRotationY(radians)));
+}
+
+void Sample3DSceneRenderer::Static(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 pos)
+{
+	// Prepare to pass the updated model matrix to the shader
+	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixTranslation(pos.x, pos.y, pos.z)));
+}
+
+void Sample3DSceneRenderer::Orbit(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 radians, XMFLOAT3 orbitpos, XMFLOAT3 orbitness)
+{
+	// Prepare to pass the updated model matrix to the shader
+	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixTranslation(orbitness.x, orbitness.y, orbitness.z) * (XMMatrixRotationX(radians.x) * XMMatrixRotationY(radians.y) * XMMatrixRotationZ(radians.z)) * XMMatrixTranslation(orbitpos.x, orbitpos.y, orbitpos.z)));
 }
 
 void Sample3DSceneRenderer::UpdateCamera(DX::StepTimer const& timer, float const moveSpd, float const rotSpd)
@@ -164,8 +207,6 @@ void Sample3DSceneRenderer::UpdateCamera(DX::StepTimer const& timer, float const
 		}
 		m_prevMousePos = m_currMousePos;
 	}
-
-
 }
 
 void Sample3DSceneRenderer::SetKeyboardButtons(const char* list)
@@ -235,8 +276,108 @@ void Sample3DSceneRenderer::Render(void)
 	// Attach our pixel shader.
 	context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 	// Draw the objects.
-	context->Draw(m_indexCount, 0);
-	//context->DrawIndexed(m_indexCount, 0, 0);
+	//context->Draw(m_indexCount, 0);
+	context->DrawIndexed(m_indexCount, 0, 0);
+}
+
+void Sample3DSceneRenderer::LoadObject(const char* fileName)
+{
+	std::vector<unsigned int> vertexIndices, uvIndices, normalIndices;
+	std::vector<XMFLOAT3> temp_vertices_vector;
+	std::vector<XMFLOAT2> temp_uvs_vector;
+	std::vector<XMFLOAT3> temp_normals_vector;
+
+	std::ifstream file;
+	file.open("Assets/test_pyramid.obj");
+
+	if (file.is_open())
+	{
+		while (true)
+		{
+			std::string buffer;
+			std::getline(file, buffer);
+			if (file.eof()) break;
+			std::stringstream stream(buffer);
+
+			std::string type;
+			stream >> type;
+
+			if (type == "v")
+			{
+				XMFLOAT3 vertex;
+				stream >> vertex.x >> vertex.y >> vertex.z;
+				temp_vertices_vector.push_back(vertex);
+			}
+			else if (type == "vt")
+			{
+				XMFLOAT2 uv;
+				stream >> uv.x >> uv.y;
+				temp_uvs_vector.push_back(uv);
+			}
+			else if (type == "vn")
+			{
+				XMFLOAT3 normal;
+				stream >> normal.x >> normal.y >> normal.z;
+				temp_normals_vector.push_back(normal);
+			}
+			else if (type == "f")
+			{
+				unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
+				stream >> vertexIndex[0] >> uvIndex[0] >> normalIndex[0];
+				stream >> vertexIndex[1] >> uvIndex[1] >> normalIndex[1];
+				stream >> vertexIndex[2] >> uvIndex[2] >> normalIndex[2];
+
+				vertexIndices.push_back(vertexIndex[0]);
+				vertexIndices.push_back(vertexIndex[1]);
+				vertexIndices.push_back(vertexIndex[2]);
+				uvIndices.push_back(uvIndex[0]);
+				uvIndices.push_back(uvIndex[1]);
+				uvIndices.push_back(uvIndex[2]);
+				normalIndices.push_back(normalIndex[0]);
+				normalIndices.push_back(normalIndex[1]);
+				normalIndices.push_back(normalIndex[2]);
+			}
+		}
+
+		file.close();
+	}
+
+	// Reallocate VERTICES array
+	XMFLOAT3 *temp_vertices = new XMFLOAT3[temp_vertices_vector.size()];
+	for (int i = 0; i < temp_vertices_vector.size(); ++i)
+		temp_vertices[i] = temp_vertices_vector[i];
+
+	// Reallocate  UVS array
+	XMFLOAT2 *temp_uvs = new XMFLOAT2[temp_uvs_vector.size()];
+	for (int i = 0; i < temp_uvs_vector.size(); ++i)
+		temp_uvs[i] = temp_uvs_vector[i];
+
+	// Reallocate NORMALS array
+	XMFLOAT3 *temp_normals = new XMFLOAT3[temp_normals_vector.size()];
+	for (int i = 0; i < temp_normals_vector.size(); ++i)
+		temp_normals[i] = temp_normals_vector[i];
+
+	// Reallocate VERTEX INDICES array
+	unsigned int *vertex_indices = new unsigned int[vertexIndices.size()];
+	for (int i = 0; i < vertexIndices.size(); ++i)
+		vertex_indices[i] = vertexIndices[i];
+
+	//m_indexCount = temp_vertices_vector.size();
+	D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+	vertexBufferData.pSysMem = temp_vertices;
+	vertexBufferData.SysMemPitch = 0;
+	vertexBufferData.SysMemSlicePitch = 0;
+	CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(XMFLOAT3) * temp_vertices_vector.size(), D3D11_BIND_VERTEX_BUFFER);
+	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &m_vertexBuffer));
+
+	m_indexCount = vertexIndices.size();
+
+	D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+	indexBufferData.pSysMem = vertex_indices;
+	indexBufferData.SysMemPitch = 0;
+	indexBufferData.SysMemSlicePitch = 0;
+	CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * vertexIndices.size(), D3D11_BIND_INDEX_BUFFER);
+	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_indexBuffer));
 }
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
@@ -271,65 +412,24 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	// Once both shaders are loaded, create the mesh.
 	auto createCubeTask = (createPSTask && createVSTask).then([this]()
 	{
-		std::vector<unsigned int> *vertexIndices, *uvIndices, *normalIndices;
-		std::vector<XMFLOAT3> temp_vertices_vector;
-		std::vector<XMFLOAT3> temp_uvs;
-		std::vector<XMFLOAT3> temp_normals;
-
-		std::ifstream file;
-		file.open("Assets/test_pyramid.obj");
-		char ndnsds = '\n';
-		if (file.is_open())
-		{
-			while (!file.eof())
-			{
-				char* buffer;
-				file.getline(buffer, 255);
-				std::stringstream line(buffer);
-
-				char type;
-				line >> type;
-				
-				if (type == 'v')
-				{
-					XMFLOAT3 vertexes;
-					std::string vertex;
-					line >> vertex;
-					vertexes.x = atof(vertex);
-					line >> vertex;
-					vertexes.y = atof(vertex);
-					line >> vertex;
-					vertexes.z = atof(vertex);
-					temp_vertices_vector.push_back(vertex);
-				}
-			}
-
-			file.close();
-		}
-
-		XMFLOAT3 *temp_vertices = new XMFLOAT3[temp_vertices_vector.size()];
-		for (int i = 0; i < temp_vertices_vector.size(); ++i)
-			temp_vertices[i] = temp_vertices_vector[i];
-
 		// Load mesh vertices. Each vertex has a position and a color.
-		//static const VertexPositionColor cubeVertices[] =
-		//{
-		//	{XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f)},
-		//	{XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f)},
-		//	{XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f)},
-		//	{XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f)},
-		//	{XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f)},
-		//	{XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f)},
-		//	{XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f)},
-		//	{XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f)},
-		//};
+		static const VertexPositionColor cubeVertices[] =
+		{
+			{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, 0.0f) },
+			{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+			{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
+			{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 1.0f) },
+			{ XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+			{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 1.0f) },
+			{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f) },
+			{ XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f) },
+		};
 
-		m_indexCount = temp_vertices_vector.size();
 		D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
-		vertexBufferData.pSysMem = temp_vertices;
+		vertexBufferData.pSysMem = cubeVertices;
 		vertexBufferData.SysMemPitch = 0;
 		vertexBufferData.SysMemSlicePitch = 0;
-		CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(XMFLOAT3) * temp_vertices_vector.size(), D3D11_BIND_VERTEX_BUFFER);
+		CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(cubeVertices), D3D11_BIND_VERTEX_BUFFER);
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &m_vertexBuffer));
 
 		// Load mesh indices. Each trio of indices represents
