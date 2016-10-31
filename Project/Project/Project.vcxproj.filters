@@ -92,7 +92,10 @@
     <None Include="Assets\archangel-light.obj">
       <Filter>Assets</Filter>
     </None>
-    <None Include="Assets\test_pyramid.obj">
+    <None Include="Assets\test pyramid.obj">
+      <Filter>Assets</Filter>
+    </None>
+    <None Include="Assets\test_pyramid_2.obj">
       <Filter>Assets</Filter>
     </None>
   </ItemGroup>

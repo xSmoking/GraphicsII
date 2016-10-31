@@ -3,6 +3,7 @@
 #include "..\Common\DeviceResources.h"
 #include "ShaderStructures.h"
 #include "..\Common\StepTimer.h"
+#include <vector>
 
 
 namespace DX11UWA
@@ -12,7 +13,15 @@ namespace DX11UWA
 	{
 	public:
 		Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources);
-		void LoadObject(const char* fileName);
+
+		bool LoadObject(const char *_path,
+						std::vector<DirectX::XMFLOAT3> &_vertices,
+						std::vector<DirectX::XMFLOAT2> &_uvs,
+						std::vector<DirectX::XMFLOAT3> &_normals,
+						std::vector<unsigned short> &_vertexIndices,
+						std::vector<unsigned short> &_uvIndices,
+						std::vector<unsigned short> &_normalIndices);
+
 		void CreateDeviceDependentResources(void);
 		void CreateWindowSizeDependentResources(void);
 		void ReleaseDeviceDependentResources(void);
