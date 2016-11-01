@@ -136,44 +136,46 @@ void Sample3DSceneRenderer::UpdateCamera(DX::StepTimer const& timer, float const
 {
 	const float delta_time = (float)timer.GetElapsedSeconds();
 
+	float moveSpeed = moveSpd;
+
 	if (m_kbuttons['W'])
 	{
-		XMMATRIX translation = XMMatrixTranslation(0.0f, 0.0f, moveSpd * delta_time);
+		XMMATRIX translation = XMMatrixTranslation(0.0f, 0.0f, moveSpeed * delta_time);
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
 	}
 	if (m_kbuttons['S'])
 	{
-		XMMATRIX translation = XMMatrixTranslation(0.0f, 0.0f, -moveSpd * delta_time);
+		XMMATRIX translation = XMMatrixTranslation(0.0f, 0.0f, -moveSpeed * delta_time);
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
 	}
 	if (m_kbuttons['A'])
 	{
-		XMMATRIX translation = XMMatrixTranslation(-moveSpd * delta_time, 0.0f, 0.0f);
+		XMMATRIX translation = XMMatrixTranslation(-moveSpeed * delta_time, 0.0f, 0.0f);
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
 	}
 	if (m_kbuttons['D'])
 	{
-		XMMATRIX translation = XMMatrixTranslation(moveSpd * delta_time, 0.0f, 0.0f);
+		XMMATRIX translation = XMMatrixTranslation(moveSpeed * delta_time, 0.0f, 0.0f);
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
 	}
 	if (m_kbuttons['X'])
 	{
-		XMMATRIX translation = XMMatrixTranslation(0.0f, -moveSpd * delta_time, 0.0f);
+		XMMATRIX translation = XMMatrixTranslation(0.0f, -moveSpeed * delta_time, 0.0f);
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
 	}
 	if (m_kbuttons[VK_SPACE])
 	{
-		XMMATRIX translation = XMMatrixTranslation(0.0f, moveSpd * delta_time, 0.0f);
+		XMMATRIX translation = XMMatrixTranslation(0.0f, moveSpeed * delta_time, 0.0f);
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
@@ -277,14 +279,35 @@ void Sample3DSceneRenderer::Render(void)
 	context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 	// Draw the objects.
 	context->DrawIndexed(m_indexCount, 0, 0);
+
+	for (unsigned int i = 0; i < 2; ++i)
+	{
+		m_models[i].m_constantBufferData.view = m_constantBufferData.view;
+		m_models[i].m_constantBufferData.projection = m_constantBufferData.projection;
+		//m_models[i].m_constantBufferData.eyepos = m_constantBufferData.eyepos;
+		context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &m_models[i].m_constantBufferData, 0, 0, 0);
+
+		stride = sizeof(VertexPositionColor);
+		offset = 0;
+		context->IASetVertexBuffers(0, 1, m_models[i].m_vertexBuffer.GetAddressOf(), &stride, &offset);
+
+		context->IASetIndexBuffer(m_models[i].m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		context->VSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
+		//context->PSSetShaderResources(0, 1, m_models[i].m_texture.GetAddressOf());
+		//context->PSSetShaderResources(1, 1, m_models[i].m_normalMap.GetAddressOf());
+
+		context->DrawIndexed(m_models[i].m_indexCount, 0, 0);
+	}
 }
 
 bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<XMFLOAT3> &_vertices, std::vector<XMFLOAT2> &_uvs, std::vector<XMFLOAT3> &_normals, std::vector<unsigned short> &_vertexIndices, std::vector<unsigned short> &_uvIndices, std::vector<unsigned short> &_normalIndices)
 {
 	std::vector<unsigned short> vertexIndices, uvIndices, normalIndices;
-	std::vector<XMFLOAT3> temp_vertices_vector;
-	std::vector<XMFLOAT2> temp_uvs_vector;
-	std::vector<XMFLOAT3> temp_normals_vector;
+	std::vector<XMFLOAT3> vertices_vector;
+	std::vector<XMFLOAT2> uvs_vector;
+	std::vector<XMFLOAT3> normals_vector;
 
 	std::ifstream file;
 	file.open(_path);
@@ -293,6 +316,7 @@ bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<XMFLOAT3> 
 	{
 		while (true)
 		{
+			//char buffer[128];
 			std::string buffer;
 			std::getline(file, buffer);
 			if (file.eof()) break;
@@ -305,36 +329,50 @@ bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<XMFLOAT3> 
 			{
 				XMFLOAT3 vertex;
 				stream >> vertex.x >> vertex.y >> vertex.z;
-				temp_vertices_vector.push_back(vertex);
+				vertices_vector.push_back(vertex);
+				XMFLOAT3 color(0, 1, 1);
+				vertices_vector.push_back(color);
 			}
 			else if (type == "vt")
 			{
 				XMFLOAT2 uv;
 				stream >> uv.x >> uv.y;
-				temp_uvs_vector.push_back(uv);
+				uvs_vector.push_back(uv);
 			}
 			else if (type == "vn")
 			{
 				XMFLOAT3 normal;
 				stream >> normal.x >> normal.y >> normal.z;
-				temp_normals_vector.push_back(normal);
+				normals_vector.push_back(normal);
 			}
 			else if (type == "f")
 			{
-				unsigned short vertexIndex[3], uvIndex[3], normalIndex[3];
-				stream >> vertexIndex[0] >> uvIndex[0] >> normalIndex[0];
-				stream >> vertexIndex[1] >> uvIndex[1] >> normalIndex[1];
-				stream >> vertexIndex[2] >> uvIndex[2] >> normalIndex[2];
+				std::string buffer2;
+				int count = 0;
+				for (size_t i = 0; i < buffer.length(); ++i)
+				{
+					if (buffer[i] != 'f' && buffer[i] != '/' &&buffer[i] != ' ')
+					{
+						buffer2 += buffer[i];
+					}
+					else
+					{
+						if (buffer2.length() > 0)
+						{
+							if (count == 0)
+								vertexIndices.push_back(stoi(buffer2));
+							else if (count == 1)
+								uvIndices.push_back(stoi(buffer2));
+							else if (count == 2)
+								normalIndices.push_back(stoi(buffer2));
 
-				vertexIndices.push_back(vertexIndex[0]);
-				vertexIndices.push_back(vertexIndex[1]);
-				vertexIndices.push_back(vertexIndex[2]);
-				uvIndices.push_back(uvIndex[0]);
-				uvIndices.push_back(uvIndex[1]);
-				uvIndices.push_back(uvIndex[2]);
-				normalIndices.push_back(normalIndex[0]);
-				normalIndices.push_back(normalIndex[1]);
-				normalIndices.push_back(normalIndex[2]);
+							count++;
+							if (count == 3)
+								count = 0;
+							buffer2.erase();
+						}
+					}
+				}
 			}
 		}
 
@@ -343,9 +381,17 @@ bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<XMFLOAT3> 
 	else
 		return false;
 
-	_vertices = temp_vertices_vector;
-	_uvs = temp_uvs_vector;
-	_normals = temp_normals_vector;
+	vertexIndices.resize(vertexIndices.size());
+	for (unsigned int i = 0; i < vertexIndices.size(); i++)
+	{
+		unsigned int vIndex = vertexIndices[i];
+		unsigned int vertex = vIndex - 1;
+		vertexIndices[i] = vertex;
+	}
+
+	_vertices = vertices_vector;
+	_uvs = uvs_vector;
+	_normals = normals_vector;
 	_vertexIndices = vertexIndices;
 	_uvIndices = uvIndices;
 	_normalIndices = normalIndices;
@@ -385,12 +431,13 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	// Once both shaders are loaded, create the mesh.
 	auto createCubeTask = (createPSTask && createVSTask).then([this]()
 	{
+		std::string str;
 		std::vector<unsigned short> vertexIndices, uvIndices, normalIndices;
 		std::vector<XMFLOAT3> vertices_vector;
 		std::vector<XMFLOAT2> uvs_vector;
 		std::vector<XMFLOAT3> normals_vector;
 
-		if (LoadObject("Assets/test_pyramid_2.obj", vertices_vector, uvs_vector, normals_vector, vertexIndices, uvIndices, normalIndices))
+		if (LoadObject("Assets/1911.obj", vertices_vector, uvs_vector, normals_vector, vertexIndices, uvIndices, normalIndices))
 		{
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = vertices_vector.data();

@@ -89,13 +89,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Project_TemporaryKey.pfx" />
-    <None Include="Assets\archangel-light.obj">
+    <None Include="Assets\test_pyramid.obj">
       <Filter>Assets</Filter>
     </None>
-    <None Include="Assets\test pyramid.obj">
+    <None Include="Assets\succubus_hr-fire.obj">
       <Filter>Assets</Filter>
     </None>
-    <None Include="Assets\test_pyramid_2.obj">
+    <None Include="Assets\1911.obj">
       <Filter>Assets</Filter>
     </None>
   </ItemGroup>
