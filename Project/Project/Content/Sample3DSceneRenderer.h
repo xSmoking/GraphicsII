@@ -67,6 +67,11 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
 
+		// Texture variables
+		Microsoft::WRL::ComPtr<ID3D11Texture2D>				diffuseTexture;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D>				objectTexture;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>	objectView;
+
 		// System resources for cube geometry.
 		ModelViewProjectionConstantBuffer	m_constantBufferData;
 		uint32	m_indexCount;

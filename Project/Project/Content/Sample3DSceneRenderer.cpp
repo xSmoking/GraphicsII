@@ -23,6 +23,7 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
+	//CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/1911.dds", &objectTexture, &objectView);
 }
 
 // Initializes view parameters when the window size changes.
