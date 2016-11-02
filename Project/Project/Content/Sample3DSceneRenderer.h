@@ -4,7 +4,7 @@
 #include "ShaderStructures.h"
 #include "..\Common\StepTimer.h"
 #include <vector>
-
+#include <atlbase.h>
 
 namespace DX11UWA
 {
@@ -14,13 +14,7 @@ namespace DX11UWA
 	public:
 		Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources);
 
-		bool LoadObject(const char *_path,
-						std::vector<DirectX::XMFLOAT3> &_vertices,
-						std::vector<DirectX::XMFLOAT2> &_uvs,
-						std::vector<DirectX::XMFLOAT3> &_normals,
-						std::vector<unsigned short> &_vertexIndices,
-						std::vector<unsigned short> &_uvIndices,
-						std::vector<unsigned short> &_normalIndices);
+		bool LoadObject(const char *_path, std::vector<VertexPositionUVNormal> &_verts, std::vector<unsigned int> &_inds, const float resizeFactor);
 
 		void CreateDeviceDependentResources(void);
 		void CreateWindowSizeDependentResources(void);
@@ -50,13 +44,9 @@ namespace DX11UWA
 		struct MODEL
 		{
 			ModelViewProjectionConstantBuffer			m_constantBufferData;
-			Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayout;
 			Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
 			Microsoft::WRL::ComPtr<ID3D11Buffer>		m_indexBuffer;
-			Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
-			Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
 			Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
-			uint32	m_indexCount;
 		};
 		MODEL m_models[2];
 
@@ -68,9 +58,9 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
 
 		// Texture variables
-		Microsoft::WRL::ComPtr<ID3D11Texture2D>				diffuseTexture;
-		Microsoft::WRL::ComPtr<ID3D11Texture2D>				objectTexture;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>	objectView;
+		CComPtr<ID3D11Texture2D>				diffuseTexture;
+		CComPtr<ID3D11Texture2D>				objectTexture;
+		CComPtr<ID3D11ShaderResourceView>	objectView;
 
 		// System resources for cube geometry.
 		ModelViewProjectionConstantBuffer	m_constantBufferData;
