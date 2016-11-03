@@ -24,6 +24,23 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
+
+	ID3D11SamplerState *samplerState;
+	D3D11_SAMPLER_DESC samplerDesc;
+	ZeroMemory(&samplerDesc, sizeof(D3D11_SAMPLER_DESC));
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.MaxAnisotropy = (UINT)1.0f;
+	samplerDesc.MipLODBias = 1.0f;
+	m_deviceResources->GetD3DDevice()->CreateSamplerState(&samplerDesc, &samplerState);
+	m_deviceResources->GetD3DDeviceContext()->PSSetSamplers(0, 1, &samplerState);
+
+	MODEL m1911, SuccubusFire, Katarina;
+	models.push_back(m1911);
+	models.push_back(SuccubusFire);
+	models.push_back(Katarina);
 }
 
 // Initializes view parameters when the window size changes.
@@ -103,10 +120,12 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 		float radiansPerSecond = XMConvertToRadians(m_degreesPerSecond);
 		double totalRotation = timer.GetTotalSeconds() * radiansPerSecond;
 		float radians = static_cast<float>(fmod(totalRotation, XM_2PI));
-		//Oradians = radians;
-		//Orbit(m_constantBufferData, XMFLOAT3(0, 0, radians), XMFLOAT3(0, 0, 0), XMFLOAT3(3, 8, 0));
+		Oradians = radians;
+		Orbit(m_constantBufferData, XMFLOAT3(0, 0, radians), XMFLOAT3(0, 0, 0), XMFLOAT3(3, 8, 0));
 
-		Rotate(radians);
+		Rotate(models[0].m_constantBufferData, radians);
+		Static(models[1].m_constantBufferData, XMFLOAT3(1.0f, 0.0f, 1.0f));
+		Static(models[2].m_constantBufferData, XMFLOAT3(1.0f, 0.0f, -2.0f));
 	}
 
 	// Update or move camera here
@@ -115,10 +134,10 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 }
 
 // Rotate the 3D cube model a set amount of radians.
-void Sample3DSceneRenderer::Rotate(float radians)
+void Sample3DSceneRenderer::Rotate(ModelViewProjectionConstantBuffer &objectM, float radians)
 {
 	// Prepare to pass the updated model matrix to the shader
-	XMStoreFloat4x4(&m_constantBufferData.model, XMMatrixTranspose(XMMatrixRotationY(radians)));
+	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixRotationY(radians)));
 }
 
 void Sample3DSceneRenderer::Static(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 pos)
@@ -239,7 +258,7 @@ void Sample3DSceneRenderer::TrackingUpdate(float positionX)
 	if (m_tracking)
 	{
 		float radians = XM_2PI * 2.0f * positionX / m_deviceResources->GetOutputSize().Width;
-		Rotate(radians);
+		//Rotate(radians);
 	}
 }
 
@@ -258,31 +277,17 @@ void Sample3DSceneRenderer::Render(void)
 	}
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
-
 	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_camera))));
 
-	ID3D11ShaderResourceView *shaderResourceView[] = { objectView };
-	ID3D11SamplerState *samplerState;
-	D3D11_SAMPLER_DESC samplerDesc;
-	ZeroMemory(&samplerDesc, sizeof(D3D11_SAMPLER_DESC));
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MaxAnisotropy = (UINT)1.0f;
-	samplerDesc.MipLODBias = 1.0f;
-	m_deviceResources->GetD3DDevice()->CreateSamplerState(&samplerDesc, &samplerState);
-	context->PSSetSamplers(0, 1, &samplerState);
-	context->PSSetShaderResources(0, 1, shaderResourceView);
-
+	// CUBE STUFF
 	// Prepare the constant buffer to send it to the graphics device.
 	context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0, 0);
 	// Each vertex is one instance of the VertexPositionColor struct.
-	UINT stride = sizeof(VertexPositionUVNormal);
+	UINT stride = sizeof(VertexPositionColor);
 	UINT offset = 0;
 	context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
 	// Each index is one 16-bit unsigned integer (short).
-	context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+	context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	context->IASetInputLayout(m_inputLayout.Get());
 	// Attach our vertex shader.
@@ -292,7 +297,34 @@ void Sample3DSceneRenderer::Render(void)
 	// Attach our pixel shader.
 	context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
 	// Draw the objects.
-	context->DrawIndexed(m_indexCount, 0, 0);
+	//context->DrawIndexed(m_indexCount, 0, 0);
+
+	// MY STUFF
+	for(size_t i = 0; i < models.size(); ++i)
+	{
+		ID3D11ShaderResourceView *shaderResourceView[] = { models[i].m_texture };
+		context->PSSetShaderResources(0, 1, shaderResourceView);
+
+		//models[i].m_constantBufferData.model = m_constantBufferData.model;
+		models[i].m_constantBufferData.view = m_constantBufferData.view;
+		models[i].m_constantBufferData.projection = m_constantBufferData.projection;
+
+		context->UpdateSubresource1(m_modelConstantBuffer.Get(), 0, NULL, &models[i].m_constantBufferData, 0, 0, 0);
+
+		stride = sizeof(VertexPositionUVNormal);
+		offset = 0;
+		context->IASetVertexBuffers(0, 1, models[i].m_vertexBuffer.GetAddressOf(), &stride, &offset);
+
+		context->IASetIndexBuffer(models[i].m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		context->IASetInputLayout(m_modelInputLayout.Get());
+
+		context->VSSetShader(m_modelVertexShader.Get(), nullptr, 0);
+		context->VSSetConstantBuffers1(0, 1, m_modelConstantBuffer.GetAddressOf(), nullptr, nullptr);
+		context->PSSetShader(m_modelPixelShader.Get(), nullptr, 0);
+
+		context->DrawIndexed(models[i].m_indexCount, 0, 0);
+	}
 }
 
 bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<VertexPositionUVNormal> &_verts, std::vector<unsigned int> &_inds, const float resizeFactor = 1.0f)
@@ -380,7 +412,7 @@ bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<VertexPosi
 		VertexPositionUVNormal temp;
 		temp.pos = vertices_vector[vertexIndices[i] - 1];
 		temp.uv = uvs_vector[uvIndices[i] - 1];
-		//temp.normal = normals_vector[normalIndices[i] - 1];
+		temp.normal = normals_vector[normalIndices[i] - 1];
 		_verts.push_back(temp);
 		_inds.push_back(i);
 	}
@@ -480,11 +512,11 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 
 	// MODEL LOADING
 	auto loadVSModel = DX::ReadDataAsync(L"ModelVertexShader.cso");
-	auto loadPSModel = DX::ReadDataAsync(L"SamplePixelShader.cso");
+	auto loadPSModel = DX::ReadDataAsync(L"ModelPixelShader.cso");
 
 	auto createVSModel = loadVSModel.then([this](const std::vector<byte>& fileData)
 	{
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateVertexShader(&fileData[0], fileData.size(), nullptr, &m_vertexShader));
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateVertexShader(&fileData[0], fileData.size(), nullptr, &m_modelVertexShader));
 
 		static const D3D11_INPUT_ELEMENT_DESC vertexDesc[] =
 		{
@@ -493,15 +525,15 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		};
 
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateInputLayout(vertexDesc, ARRAYSIZE(vertexDesc), &fileData[0], fileData.size(), &m_inputLayout));
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateInputLayout(vertexDesc, ARRAYSIZE(vertexDesc), &fileData[0], fileData.size(), &m_modelInputLayout));
 	});
 
 	auto createPSModel = loadPSModel.then([this](const std::vector<byte>& fileData)
 	{
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &m_pixelShader));
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &m_modelPixelShader));
 
 		CD3D11_BUFFER_DESC constantBufferDesc(sizeof(ModelViewProjectionConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&constantBufferDesc, nullptr, &m_constantBuffer));
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&constantBufferDesc, nullptr, &m_modelConstantBuffer));
 	});
 
 	// Once both shaders are loaded, create the mesh.
@@ -512,31 +544,79 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 
 		if (LoadObject("Assets/1911.obj", verts, inds))
 		{
-			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/1911.dds", (ID3D11Resource**)&objectTexture, &objectView));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/1911.dds", nullptr, &models[0].m_texture));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
 			vertexBufferData.SysMemPitch = 0;
 			vertexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VertexPositionUVNormal) * verts.size(), D3D11_BIND_VERTEX_BUFFER);
-			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &m_vertexBuffer));
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &models[0].m_vertexBuffer));
 
-			m_indexCount = inds.size();
+			models[0].m_indexCount = inds.size();
 
 			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
 			indexBufferData.pSysMem = inds.data();
 			indexBufferData.SysMemPitch = 0;
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
-			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_indexBuffer));
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &models[0].m_indexBuffer));
 		}
 	});
 
-	createM1911.then([this]()
+	auto createSuccubusFire = (createPSModel && createVSModel).then([this]()
 	{
-		m_loadingComplete = true;
+		std::vector<VertexPositionUVNormal> verts;
+		std::vector<unsigned int> inds;
+
+		if (LoadObject("Assets/succubus_hr-fire.obj", verts, inds, 80))
+		{
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/succubus_hr-fire.dds", nullptr, &models[1].m_texture));
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VertexPositionUVNormal) * verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &models[1].m_vertexBuffer));
+
+			models[1].m_indexCount = inds.size();
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = inds.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &models[1].m_indexBuffer));
+		}
 	});
 
+	auto createKatarina = (createPSModel && createVSModel).then([this]()
+	{
+		std::vector<VertexPositionUVNormal> verts;
+		std::vector<unsigned int> inds;
+
+		if (LoadObject("Assets/kitty_cat_katarina.obj", verts, inds, 35))
+		{
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/kitty_cat_katarina.dds", nullptr, &models[2].m_texture));
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VertexPositionUVNormal) * verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &models[2].m_vertexBuffer));
+
+			models[2].m_indexCount = inds.size();
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = inds.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &models[2].m_indexBuffer));
+		}
+	});
 }
 
 void Sample3DSceneRenderer::ReleaseDeviceDependentResources(void)

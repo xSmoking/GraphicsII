@@ -33,7 +33,7 @@ namespace DX11UWA
 
 
 	private:
-		void Rotate(float radians);
+		void Rotate(ModelViewProjectionConstantBuffer &objectM, float radians);
 		void Static(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 pos);
 		void Orbit(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 radians, DirectX::XMFLOAT3 orbitpos, DirectX::XMFLOAT3 orbitness);
 		void UpdateCamera(DX::StepTimer const& timer, float const moveSpd, float const rotSpd);
@@ -43,12 +43,18 @@ namespace DX11UWA
 
 		struct MODEL
 		{
-			ModelViewProjectionConstantBuffer			m_constantBufferData;
-			Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
-			Microsoft::WRL::ComPtr<ID3D11Buffer>		m_indexBuffer;
-			Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
+			ModelViewProjectionConstantBuffer		m_constantBufferData;
+			Microsoft::WRL::ComPtr<ID3D11Buffer>	m_vertexBuffer;
+			Microsoft::WRL::ComPtr<ID3D11Buffer>	m_indexBuffer;
+			CComPtr<ID3D11ShaderResourceView>		m_texture;
+			uint32									m_indexCount;
 		};
-		MODEL m_models[2];
+		std::vector<MODEL> models;
+		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_modelInputLayout;
+		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_modelVertexShader;
+		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_modelPixelShader;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_modelConstantBuffer;
+
 
 		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayout;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
@@ -58,9 +64,7 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
 
 		// Texture variables
-		CComPtr<ID3D11Texture2D>				diffuseTexture;
-		CComPtr<ID3D11Texture2D>				objectTexture;
-		CComPtr<ID3D11ShaderResourceView>	objectView;
+		CComPtr<ID3D11ShaderResourceView>	m_texture;
 
 		// System resources for cube geometry.
 		ModelViewProjectionConstantBuffer	m_constantBufferData;

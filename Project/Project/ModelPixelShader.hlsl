@@ -6,8 +6,10 @@ struct PixelShaderInput
 	float3 normal : NORMAL;
 };
 
-// A pass-through function for the (interpolated) color data.
+texture2D env : register(t0);
+SamplerState envFilter : register(s0);
+
 float4 main(PixelShaderInput input) : SV_TARGET
 {
-	return float4(input.color, 1.0f);
+	return env.Sample(envFilter, input.color.xy);
 }

@@ -89,6 +89,9 @@
     <Image Include="Assets\succubus_hr-fire.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\kitty_cat_katarina.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -104,9 +107,15 @@
     <None Include="Assets\1911.obj">
       <Filter>Assets</Filter>
     </None>
+    <None Include="Assets\kitty_cat_katarina.obj">
+      <Filter>Assets</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\ModelVertexShader.hlsl">
+      <Filter>Content</Filter>
+    </FxCompile>
+    <FxCompile Include="ModelPixelShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
   </ItemGroup>
