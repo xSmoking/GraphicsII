@@ -92,6 +92,18 @@
     <Image Include="Assets\kitty_cat_katarina.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\Nebula.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Starfield.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Earth.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Sun.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -110,12 +122,24 @@
     <None Include="Assets\kitty_cat_katarina.obj">
       <Filter>Assets</Filter>
     </None>
+    <None Include="Assets\SkyboxOcean.dds">
+      <Filter>Assets</Filter>
+    </None>
+    <None Include="Assets\Earth.obj">
+      <Filter>Assets</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\ModelVertexShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
     <FxCompile Include="ModelPixelShader.hlsl">
+      <Filter>Content</Filter>
+    </FxCompile>
+    <FxCompile Include="SkyboxVertexShader.hlsl">
+      <Filter>Content</Filter>
+    </FxCompile>
+    <FxCompile Include="SkyboxPixelShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
   </ItemGroup>

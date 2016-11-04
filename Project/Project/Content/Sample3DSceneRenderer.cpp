@@ -22,9 +22,6 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	m_prevMousePos = nullptr;
 	memset(&m_camera, 0, sizeof(XMFLOAT4X4));
 
-	CreateDeviceDependentResources();
-	CreateWindowSizeDependentResources();
-
 	ID3D11SamplerState *samplerState;
 	D3D11_SAMPLER_DESC samplerDesc;
 	ZeroMemory(&samplerDesc, sizeof(D3D11_SAMPLER_DESC));
@@ -37,10 +34,20 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	m_deviceResources->GetD3DDevice()->CreateSamplerState(&samplerDesc, &samplerState);
 	m_deviceResources->GetD3DDeviceContext()->PSSetSamplers(0, 1, &samplerState);
 
-	MODEL m1911, SuccubusFire, Katarina;
+	CreateDeviceDependentResources();
+	CreateWindowSizeDependentResources();
+
+	MODEL m1911, SuccubusFire, Earth, Sun;
+	SuccubusFire.m_position = XMFLOAT3(1.0f, 0.0f, 1.0f);
+	Earth.m_position = XMFLOAT3(15.0f, 0.0f, 0.0f);
+	Sun.m_position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	SuccubusFire.m_render = false;
+	m1911.m_render = false;
+
 	models.push_back(m1911);
 	models.push_back(SuccubusFire);
-	models.push_back(Katarina);
+	models.push_back(Earth);
+	models.push_back(Sun);
 }
 
 // Initializes view parameters when the window size changes.
@@ -120,35 +127,41 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 		float radiansPerSecond = XMConvertToRadians(m_degreesPerSecond);
 		double totalRotation = timer.GetTotalSeconds() * radiansPerSecond;
 		float radians = static_cast<float>(fmod(totalRotation, XM_2PI));
-		Oradians = radians;
-		Orbit(m_constantBufferData, XMFLOAT3(0, 0, radians), XMFLOAT3(0, 0, 0), XMFLOAT3(3, 8, 0));
 
-		Rotate(models[0].m_constantBufferData, radians);
-		Static(models[1].m_constantBufferData, XMFLOAT3(1.0f, 0.0f, 1.0f));
-		Static(models[2].m_constantBufferData, XMFLOAT3(1.0f, 0.0f, -2.0f));
+		TranslateAndRotate(models[2].m_constantBufferData, models[2].m_position, radians);
+
+		Static(models[3].m_constantBufferData, models[3].m_position);
+
+		StaticSkybox(m_skyboxConstantBufferData, XMFLOAT3(m_camera._41, m_camera._42, m_camera._43));
 	}
 
 	// Update or move camera here
-	UpdateCamera(timer, 1.0f, 0.75f);
-
+	UpdateCamera(timer, 5.0f, 0.75f);
 }
 
 // Rotate the 3D cube model a set amount of radians.
+void Sample3DSceneRenderer::TranslateAndRotate(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 pos, float radians)
+{
+	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixRotationY(radians) * XMMatrixTranslation(pos.x, pos.y, pos.z) * XMMatrixRotationY(radians)));
+}
+
 void Sample3DSceneRenderer::Rotate(ModelViewProjectionConstantBuffer &objectM, float radians)
 {
-	// Prepare to pass the updated model matrix to the shader
 	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixRotationY(radians)));
 }
 
 void Sample3DSceneRenderer::Static(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 pos)
 {
-	// Prepare to pass the updated model matrix to the shader
 	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixTranslation(pos.x, pos.y, pos.z)));
+}
+
+void Sample3DSceneRenderer::StaticSkybox(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 pos)
+{
+	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixTranslation(pos.x, pos.y, pos.z)) * XMMatrixScaling(100, 100, 100));
 }
 
 void Sample3DSceneRenderer::Orbit(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 radians, XMFLOAT3 orbitpos, XMFLOAT3 orbitness)
 {
-	// Prepare to pass the updated model matrix to the shader
 	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixTranslation(orbitness.x, orbitness.y, orbitness.z) * (XMMatrixRotationX(radians.x) * XMMatrixRotationY(radians.y) * XMMatrixRotationZ(radians.z)) * XMMatrixTranslation(orbitpos.x, orbitpos.y, orbitpos.z)));
 }
 
@@ -156,46 +169,44 @@ void Sample3DSceneRenderer::UpdateCamera(DX::StepTimer const& timer, float const
 {
 	const float delta_time = (float)timer.GetElapsedSeconds();
 
-	float moveSpeed = moveSpd;
-
 	if (m_kbuttons['W'])
 	{
-		XMMATRIX translation = XMMatrixTranslation(0.0f, 0.0f, moveSpeed * delta_time);
+		XMMATRIX translation = XMMatrixTranslation(0.0f, 0.0f, moveSpd * delta_time);
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
 	}
 	if (m_kbuttons['S'])
 	{
-		XMMATRIX translation = XMMatrixTranslation(0.0f, 0.0f, -moveSpeed * delta_time);
+		XMMATRIX translation = XMMatrixTranslation(0.0f, 0.0f, -moveSpd * delta_time);
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
 	}
 	if (m_kbuttons['A'])
 	{
-		XMMATRIX translation = XMMatrixTranslation(-moveSpeed * delta_time, 0.0f, 0.0f);
+		XMMATRIX translation = XMMatrixTranslation(-moveSpd * delta_time, 0.0f, 0.0f);
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
 	}
 	if (m_kbuttons['D'])
 	{
-		XMMATRIX translation = XMMatrixTranslation(moveSpeed * delta_time, 0.0f, 0.0f);
+		XMMATRIX translation = XMMatrixTranslation(moveSpd * delta_time, 0.0f, 0.0f);
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
 	}
 	if (m_kbuttons['X'])
 	{
-		XMMATRIX translation = XMMatrixTranslation(0.0f, -moveSpeed * delta_time, 0.0f);
+		XMMATRIX translation = XMMatrixTranslation(0.0f, -moveSpd * delta_time, 0.0f);
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
 	}
 	if (m_kbuttons[VK_SPACE])
 	{
-		XMMATRIX translation = XMMatrixTranslation(0.0f, moveSpeed * delta_time, 0.0f);
+		XMMATRIX translation = XMMatrixTranslation(0.0f, moveSpd * delta_time, 0.0f);
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
@@ -305,7 +316,6 @@ void Sample3DSceneRenderer::Render(void)
 		ID3D11ShaderResourceView *shaderResourceView[] = { models[i].m_texture };
 		context->PSSetShaderResources(0, 1, shaderResourceView);
 
-		//models[i].m_constantBufferData.model = m_constantBufferData.model;
 		models[i].m_constantBufferData.view = m_constantBufferData.view;
 		models[i].m_constantBufferData.projection = m_constantBufferData.projection;
 
@@ -323,8 +333,31 @@ void Sample3DSceneRenderer::Render(void)
 		context->VSSetConstantBuffers1(0, 1, m_modelConstantBuffer.GetAddressOf(), nullptr, nullptr);
 		context->PSSetShader(m_modelPixelShader.Get(), nullptr, 0);
 
-		context->DrawIndexed(models[i].m_indexCount, 0, 0);
+		if(models[i].m_render)
+			context->DrawIndexed(models[i].m_indexCount, 0, 0);
 	}
+
+	ID3D11ShaderResourceView *shaderResourceView[] = { m_skyboxTexture };
+	context->PSSetShaderResources(0, 1, shaderResourceView);
+
+	m_skyboxConstantBufferData.view = m_constantBufferData.view;
+	m_skyboxConstantBufferData.projection = m_constantBufferData.projection;
+
+	context->UpdateSubresource1(m_modelConstantBuffer.Get(), 0, NULL, &m_skyboxConstantBufferData, 0, 0, 0);
+
+	stride = sizeof(VertexPositionColor);
+	offset = 0;
+	context->IASetVertexBuffers(0, 1, m_skyboxVertexBuffer.GetAddressOf(), &stride, &offset);
+
+	context->IASetIndexBuffer(m_skyboxIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	context->IASetInputLayout(m_modelInputLayout.Get());
+
+	context->VSSetShader(m_skyboxVertexShader.Get(), nullptr, 0);
+	context->VSSetConstantBuffers1(0, 1, m_modelConstantBuffer.GetAddressOf(), nullptr, nullptr);
+	context->PSSetShader(m_skyboxPixelShader.Get(), nullptr, 0);
+
+	context->DrawIndexed(m_skyboxIndexCount, 0, 0);
 }
 
 bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<VertexPositionUVNormal> &_verts, std::vector<unsigned int> &_inds, const float resizeFactor = 1.0f)
@@ -356,6 +389,8 @@ bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<VertexPosi
 				vertex.x /= resizeFactor;
 				vertex.y /= resizeFactor;
 				vertex.z /= resizeFactor;
+
+				//vertex.x = -vertex.x;
 				vertices_vector.push_back(vertex);
 			}
 			else if (type == "vt")
@@ -369,6 +404,7 @@ bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<VertexPosi
 			{
 				XMFLOAT3 normal;
 				stream >> normal.x >> normal.y >> normal.z;
+				//normal.x = -normal.x;
 				normals_vector.push_back(normal);
 			}
 			else if (type == "f")
@@ -412,7 +448,7 @@ bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<VertexPosi
 		VertexPositionUVNormal temp;
 		temp.pos = vertices_vector[vertexIndices[i] - 1];
 		temp.uv = uvs_vector[uvIndices[i] - 1];
-		temp.normal = normals_vector[normalIndices[i] - 1];
+		//temp.normal = normals_vector[normalIndices[i] - 1];
 		_verts.push_back(temp);
 		_inds.push_back(i);
 	}
@@ -511,8 +547,10 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	});
 
 	// MODEL LOADING
-	auto loadVSModel = DX::ReadDataAsync(L"ModelVertexShader.cso");
-	auto loadPSModel = DX::ReadDataAsync(L"ModelPixelShader.cso");
+	auto loadVSModel = DX::ReadDataAsync(L"ModelVertexShader.cso"); // Model Vertex Shader
+	auto loadPSModel = DX::ReadDataAsync(L"ModelPixelShader.cso"); // MOdel Pixel Shader
+	auto loadVSSkyboxTask = DX::ReadDataAsync(L"SkyboxVertexShader.cso"); // Skybox Vertex Shader
+	auto loadPSSkyboxTask = DX::ReadDataAsync(L"SkyboxPixelShader.cso"); // Skybox Pixel Shader
 
 	auto createVSModel = loadVSModel.then([this](const std::vector<byte>& fileData)
 	{
@@ -534,6 +572,16 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 
 		CD3D11_BUFFER_DESC constantBufferDesc(sizeof(ModelViewProjectionConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&constantBufferDesc, nullptr, &m_modelConstantBuffer));
+	});
+
+	auto createVSSkyboxTask = loadVSSkyboxTask.then([this](const std::vector<byte>& fileData)
+	{
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateVertexShader(&fileData[0], fileData.size(), nullptr, &m_skyboxVertexShader));
+	});
+
+	auto createPSSkyboxTask = loadPSSkyboxTask.then([this](const std::vector<byte>& fileData)
+	{
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &m_skyboxPixelShader));
 	});
 
 	// Once both shaders are loaded, create the mesh.
@@ -591,14 +639,14 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		}
 	});
 
-	auto createKatarina = (createPSModel && createVSModel).then([this]()
+	auto createEarth = (createPSModel && createVSModel).then([this]()
 	{
 		std::vector<VertexPositionUVNormal> verts;
 		std::vector<unsigned int> inds;
 
-		if (LoadObject("Assets/kitty_cat_katarina.obj", verts, inds, 35))
+		if (LoadObject("Assets/Earth.obj", verts, inds, 100))
 		{
-			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/kitty_cat_katarina.dds", nullptr, &models[2].m_texture));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Earth.dds", nullptr, &models[2].m_texture));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -616,6 +664,87 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &models[2].m_indexBuffer));
 		}
+	});
+
+	auto createSun = (createPSModel && createVSModel).then([this]()
+	{
+		std::vector<VertexPositionUVNormal> verts;
+		std::vector<unsigned int> inds;
+
+		if (LoadObject("Assets/Earth.obj", verts, inds, 80))
+		{
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Sun.dds", nullptr, &models[3].m_texture));
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VertexPositionUVNormal) * verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &models[3].m_vertexBuffer));
+
+			models[3].m_indexCount = inds.size();
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = inds.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &models[3].m_indexBuffer));
+		}
+	});
+
+	auto createSkyBox = (createPSSkyboxTask && createVSSkyboxTask).then([this]()
+	{
+		static const VertexPositionColor skyboxVertices[] =
+		{
+			{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT3(0.0f, 0.0f, 0.0f) },
+			{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+			{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
+			{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT3(0.0f, 1.0f, 1.0f) },
+			{ XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+			{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT3(1.0f, 0.0f, 1.0f) },
+			{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT3(1.0f, 1.0f, 0.0f) },
+			{ XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT3(1.0f, 1.0f, 1.0f) },
+		};
+
+		static const unsigned short skyboxIndices[] =
+		{
+			2,1,0, // -x
+			2,3,1,
+
+			5,6,4, // +x
+			7,6,5,
+
+			1,5,0, // -y
+			5,4,0,
+
+			6,7,2, // +y
+			7,3,2,
+
+			4,6,0, // -z
+			6,2,0,
+
+			3,7,1, // +z
+			7,5,1,
+		};
+
+		DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Starfield.dds", nullptr, &m_skyboxTexture));
+
+		D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+		vertexBufferData.pSysMem = skyboxVertices;
+		vertexBufferData.SysMemPitch = 0;
+		vertexBufferData.SysMemSlicePitch = 0;
+		CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(skyboxVertices), D3D11_BIND_VERTEX_BUFFER);
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &m_skyboxVertexBuffer));
+
+		m_skyboxIndexCount = ARRAYSIZE(skyboxIndices);
+
+		D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+		indexBufferData.pSysMem = skyboxIndices;
+		indexBufferData.SysMemPitch = 0;
+		indexBufferData.SysMemSlicePitch = 0;
+		CD3D11_BUFFER_DESC indexBufferDesc(sizeof(skyboxIndices), D3D11_BIND_INDEX_BUFFER);
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_skyboxIndexBuffer));
 	});
 }
 

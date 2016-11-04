@@ -80,7 +80,10 @@ bool DX11UWAMain::Render(void)
 	// Render the scene objects.
 	// TODO: Replace this with your app's content rendering functions.
 	m_sceneRenderer->Render();
+	context->ClearDepthStencilView(m_deviceResources->GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	m_fpsTextRenderer->Render();
+
+	
 
 	return true;
 }
