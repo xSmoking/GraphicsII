@@ -37,17 +37,17 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
 
-	MODEL m1911, SuccubusFire, Earth, Sun;
-	SuccubusFire.m_position = XMFLOAT3(1.0f, 0.0f, 1.0f);
-	Earth.m_position = XMFLOAT3(15.0f, 0.0f, 0.0f);
-	Sun.m_position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	SuccubusFire.m_render = false;
-	m1911.m_render = false;
+	MODEL Sun, Mercury, Venus, Earth, Mars;
+	Mercury.m_position = XMFLOAT3(10.0f, 0.0f, -10.0f);
+	Venus.m_position = XMFLOAT3(20.0f, 0.0f, 2.0f);
+	Earth.m_position = XMFLOAT3(30.0f, 0.0f, -4.0f);
+	Mars.m_position = XMFLOAT3(40.0f, 0.0f, 8.5f);
 
-	models.push_back(m1911);
-	models.push_back(SuccubusFire);
-	models.push_back(Earth);
 	models.push_back(Sun);
+	models.push_back(Mercury);
+	models.push_back(Venus);
+	models.push_back(Earth);
+	models.push_back(Mars);
 }
 
 // Initializes view parameters when the window size changes.
@@ -128,9 +128,12 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 		double totalRotation = timer.GetTotalSeconds() * radiansPerSecond;
 		float radians = static_cast<float>(fmod(totalRotation, XM_2PI));
 
-		TranslateAndRotate(models[2].m_constantBufferData, models[2].m_position, radians);
+		Static(models[0].m_constantBufferData, models[0].m_position);
 
-		Static(models[3].m_constantBufferData, models[3].m_position);
+		TranslateAndRotate(models[1].m_constantBufferData, models[1].m_position, radians);
+		TranslateAndRotate(models[2].m_constantBufferData, models[2].m_position, radians);
+		TranslateAndRotate(models[3].m_constantBufferData, models[3].m_position, radians);
+		TranslateAndRotate(models[4].m_constantBufferData, models[4].m_position, radians);
 
 		StaticSkybox(m_skyboxConstantBufferData, XMFLOAT3(m_camera._41, m_camera._42, m_camera._43));
 	}
@@ -157,7 +160,7 @@ void Sample3DSceneRenderer::Static(ModelViewProjectionConstantBuffer &objectM, X
 
 void Sample3DSceneRenderer::StaticSkybox(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 pos)
 {
-	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixTranslation(pos.x, pos.y, pos.z)) * XMMatrixScaling(100, 100, 100));
+	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixTranslation(pos.x, pos.y, pos.z)) * XMMatrixScaling(110, 110, 110));
 }
 
 void Sample3DSceneRenderer::Orbit(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 radians, XMFLOAT3 orbitpos, XMFLOAT3 orbitness)
@@ -448,7 +451,10 @@ bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<VertexPosi
 		VertexPositionUVNormal temp;
 		temp.pos = vertices_vector[vertexIndices[i] - 1];
 		temp.uv = uvs_vector[uvIndices[i] - 1];
-		//temp.normal = normals_vector[normalIndices[i] - 1];
+
+		if(i < normalIndices.size())
+			temp.normal = normals_vector[normalIndices[i] - 1];
+
 		_verts.push_back(temp);
 		_inds.push_back(i);
 	}
@@ -585,14 +591,14 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	});
 
 	// Once both shaders are loaded, create the mesh.
-	auto createM1911 = (createPSModel && createVSModel).then([this]()
+	auto createSun = (createPSModel && createVSModel).then([this]()
 	{
 		std::vector<VertexPositionUVNormal> verts;
 		std::vector<unsigned int> inds;
 
-		if (LoadObject("Assets/1911.obj", verts, inds))
+		if (LoadObject("Assets/Planet.obj", verts, inds, 80))
 		{
-			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/1911.dds", nullptr, &models[0].m_texture));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Sun.dds", nullptr, &models[0].m_texture));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -612,14 +618,14 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		}
 	});
 
-	auto createSuccubusFire = (createPSModel && createVSModel).then([this]()
+	auto createMercury = (createPSModel && createVSModel).then([this]()
 	{
 		std::vector<VertexPositionUVNormal> verts;
 		std::vector<unsigned int> inds;
 
-		if (LoadObject("Assets/succubus_hr-fire.obj", verts, inds, 80))
+		if (LoadObject("Assets/Planet.obj", verts, inds, 200))
 		{
-			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/succubus_hr-fire.dds", nullptr, &models[1].m_texture));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Mercury.dds", nullptr, &models[1].m_texture));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -639,14 +645,14 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		}
 	});
 
-	auto createEarth = (createPSModel && createVSModel).then([this]()
+	auto createVenus = (createPSModel && createVSModel).then([this]()
 	{
 		std::vector<VertexPositionUVNormal> verts;
 		std::vector<unsigned int> inds;
 
-		if (LoadObject("Assets/Earth.obj", verts, inds, 100))
+		if (LoadObject("Assets/Planet.obj", verts, inds, 200))
 		{
-			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Earth.dds", nullptr, &models[2].m_texture));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Venus.dds", nullptr, &models[2].m_texture));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -666,14 +672,14 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		}
 	});
 
-	auto createSun = (createPSModel && createVSModel).then([this]()
+	auto createEarth = (createPSModel && createVSModel).then([this]()
 	{
 		std::vector<VertexPositionUVNormal> verts;
 		std::vector<unsigned int> inds;
 
-		if (LoadObject("Assets/Earth.obj", verts, inds, 80))
+		if (LoadObject("Assets/Planet.obj", verts, inds, 200))
 		{
-			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Sun.dds", nullptr, &models[3].m_texture));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Earth.dds", nullptr, &models[3].m_texture));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -690,6 +696,33 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &models[3].m_indexBuffer));
+		}
+	});
+
+	auto createMars = (createPSModel && createVSModel).then([this]()
+	{
+		std::vector<VertexPositionUVNormal> verts;
+		std::vector<unsigned int> inds;
+
+		if (LoadObject("Assets/Planet.obj", verts, inds, 380))
+		{
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Mars.dds", nullptr, &models[4].m_texture));
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VertexPositionUVNormal) * verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &models[4].m_vertexBuffer));
+
+			models[4].m_indexCount = inds.size();
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = inds.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &models[4].m_indexBuffer));
 		}
 	});
 

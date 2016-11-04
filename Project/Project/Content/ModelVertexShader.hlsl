@@ -32,9 +32,9 @@ PixelShaderInput main(VertexShaderInput input)
 	pos = mul(pos, model);
 	pos = mul(pos, view);
 	pos = mul(pos, projection);
-	output.pos = pos;
-
+	
 	// Pass the color through without modification.
+	output.pos = pos;
 	output.color = input.color;
 	output.normal = input.normal;
 

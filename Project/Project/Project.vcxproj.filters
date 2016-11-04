@@ -83,15 +83,6 @@
     <Image Include="Assets\StoreLogo.png">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\1911.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\succubus_hr-fire.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\kitty_cat_katarina.dds">
-      <Filter>Assets</Filter>
-    </Image>
     <Image Include="Assets\Nebula.dds">
       <Filter>Assets</Filter>
     </Image>
@@ -101,7 +92,16 @@
     <Image Include="Assets\Earth.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\Mars.dds">
+      <Filter>Assets</Filter>
+    </Image>
     <Image Include="Assets\Sun.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Mercury.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Venus.dds">
       <Filter>Assets</Filter>
     </Image>
   </ItemGroup>
@@ -110,22 +110,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Project_TemporaryKey.pfx" />
-    <None Include="Assets\test_pyramid.obj">
-      <Filter>Assets</Filter>
-    </None>
-    <None Include="Assets\succubus_hr-fire.obj">
-      <Filter>Assets</Filter>
-    </None>
-    <None Include="Assets\1911.obj">
-      <Filter>Assets</Filter>
-    </None>
-    <None Include="Assets\kitty_cat_katarina.obj">
-      <Filter>Assets</Filter>
-    </None>
     <None Include="Assets\SkyboxOcean.dds">
       <Filter>Assets</Filter>
     </None>
-    <None Include="Assets\Earth.obj">
+    <None Include="Assets\Planet.obj">
       <Filter>Assets</Filter>
     </None>
   </ItemGroup>
