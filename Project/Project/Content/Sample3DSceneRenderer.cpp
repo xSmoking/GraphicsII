@@ -37,17 +37,23 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
 
-	MODEL Sun, Mercury, Venus, Earth, Mars;
+	MODEL Sun, Mercury, Venus, Earth, Mars, Katarina;
 	Mercury.m_position = XMFLOAT3(10.0f, 0.0f, -10.0f);
 	Venus.m_position = XMFLOAT3(20.0f, 0.0f, 2.0f);
 	Earth.m_position = XMFLOAT3(30.0f, 0.0f, -4.0f);
 	Mars.m_position = XMFLOAT3(40.0f, 0.0f, 8.5f);
+	Sun.m_render = false;
+	Mercury.m_render = false;
+	Venus.m_render = false;
+	Earth.m_render = false;
+	Mars.m_render = false;
 
 	models.push_back(Sun);
 	models.push_back(Mercury);
 	models.push_back(Venus);
 	models.push_back(Earth);
 	models.push_back(Mars);
+	models.push_back(Katarina);
 }
 
 // Initializes view parameters when the window size changes.
@@ -134,6 +140,7 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 		TranslateAndRotate(models[2].m_constantBufferData, models[2].m_position, radians);
 		TranslateAndRotate(models[3].m_constantBufferData, models[3].m_position, radians);
 		TranslateAndRotate(models[4].m_constantBufferData, models[4].m_position, radians);
+		Static(models[5].m_constantBufferData, models[5].m_position);
 
 		StaticSkybox(m_skyboxConstantBufferData, XMFLOAT3(m_camera._41, m_camera._42, m_camera._43));
 	}
@@ -557,6 +564,9 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	auto loadPSModel = DX::ReadDataAsync(L"ModelPixelShader.cso"); // MOdel Pixel Shader
 	auto loadVSSkyboxTask = DX::ReadDataAsync(L"SkyboxVertexShader.cso"); // Skybox Vertex Shader
 	auto loadPSSkyboxTask = DX::ReadDataAsync(L"SkyboxPixelShader.cso"); // Skybox Pixel Shader
+	auto loadPSDirectionalLight = DX::ReadDataAsync(L"DirectionalLightPixelShader.cso"); // Directional Light PS
+	auto loadPSPointLight = DX::ReadDataAsync(L"PointLightPixelShader.cso"); // Directional Light PS
+	auto loadPSSpotLight = DX::ReadDataAsync(L"SpotLightPixelShader.cso"); // Directional Light PS
 
 	auto createVSModel = loadVSModel.then([this](const std::vector<byte>& fileData)
 	{
@@ -578,6 +588,21 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 
 		CD3D11_BUFFER_DESC constantBufferDesc(sizeof(ModelViewProjectionConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&constantBufferDesc, nullptr, &m_modelConstantBuffer));
+	});
+
+	auto createPSDirectionalLight = loadPSDirectionalLight.then([this](const std::vector<byte>& fileData)
+	{
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &m_modelPixelShader));
+	});
+
+	auto createPSPointLight = loadPSPointLight.then([this](const std::vector<byte>& fileData)
+	{
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &m_modelPixelShader));
+	});
+
+	auto createPSSpotLight = loadPSSpotLight.then([this](const std::vector<byte>& fileData)
+	{
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &m_modelPixelShader));
 	});
 
 	auto createVSSkyboxTask = loadVSSkyboxTask.then([this](const std::vector<byte>& fileData)
@@ -723,6 +748,33 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &models[4].m_indexBuffer));
+		}
+	});
+
+	auto createKatarina = (createPSModel && createVSModel).then([this]()
+	{
+		std::vector<VertexPositionUVNormal> verts;
+		std::vector<unsigned int> inds;
+
+		if (LoadObject("Assets/katarina.obj", verts, inds))
+		{
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/katarina.dds", nullptr, &models[5].m_texture));
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VertexPositionUVNormal) * verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &models[5].m_vertexBuffer));
+
+			models[5].m_indexCount = inds.size();
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = inds.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &models[5].m_indexBuffer));
 		}
 	});
 

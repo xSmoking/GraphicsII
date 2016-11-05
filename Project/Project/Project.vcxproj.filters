@@ -104,6 +104,9 @@
     <Image Include="Assets\Venus.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\katarina.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -114,6 +117,9 @@
       <Filter>Assets</Filter>
     </None>
     <None Include="Assets\Planet.obj">
+      <Filter>Assets</Filter>
+    </None>
+    <None Include="Assets\katarina.obj">
       <Filter>Assets</Filter>
     </None>
   </ItemGroup>
@@ -128,6 +134,15 @@
       <Filter>Content</Filter>
     </FxCompile>
     <FxCompile Include="SkyboxPixelShader.hlsl">
+      <Filter>Content</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\DirectionalLightPixelShader.hlsl">
+      <Filter>Content</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\PointLightPixelShader.hlsl">
+      <Filter>Content</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\SpotLightPixelShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
   </ItemGroup>
