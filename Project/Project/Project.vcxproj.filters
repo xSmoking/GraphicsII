@@ -107,6 +107,9 @@
     <Image Include="Assets\katarina.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\IceFlow.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />

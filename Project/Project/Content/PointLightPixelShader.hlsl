@@ -14,7 +14,7 @@ float4 main(PixelShaderInput input) : SV_TARGET
 	if (surfaceColor.a < 0.5f)
 		discard;
 
-	float4 lightPos = float4(0, 20, 0, 0);
+	float4 lightPos = float4(-3.0f, 0, 0, 0);
 	float4 lightColor = float4(1, 1, 1, 0);
 
 	float4 lightDir = normalize(lightPos - input.pos);
