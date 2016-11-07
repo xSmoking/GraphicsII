@@ -35,7 +35,7 @@ namespace DX11UWA
 	private:
 		void TranslateAndRotate(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 pos, float radians);
 		void Rotate(ModelViewProjectionConstantBuffer &objectM, float radians);
-		void Static(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 pos);
+		void Translate(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 pos);
 		void StaticSkybox(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 pos);
 		void Orbit(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 radians, DirectX::XMFLOAT3 orbitpos, DirectX::XMFLOAT3 orbitness);
 		void UpdateCamera(DX::StepTimer const& timer, float const moveSpd, float const rotSpd);
@@ -66,22 +66,29 @@ namespace DX11UWA
 				m_render = true;
 			}
 		};
-		std::vector<MODEL> models;
-		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_modelInputLayout;
-		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_modelVertexShader;
-		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_modelPixelShader;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_modelConstantBuffer;
+		
+		struct SKYBOX
+		{
+			ModelViewProjectionConstantBuffer			m_constantBufferData;
+			Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
+			Microsoft::WRL::ComPtr<ID3D11Buffer>		m_indexBuffer;
+			CComPtr<ID3D11ShaderResourceView>			m_texture;
+			uint32										m_indexCount;
+			Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
+			Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
+		};
 
-		// SKYBOX VARIABLES
-		ModelViewProjectionConstantBuffer			m_skyboxConstantBufferData;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyboxVertexBuffer;
-		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_skyboxIndexBuffer;
-		CComPtr<ID3D11ShaderResourceView>			m_skyboxTexture;
-		uint32										m_skyboxIndexCount;
-		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_skyboxVertexShader;
-		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_skyboxPixelShader;
-		// END SKYBOX
-
+		struct SCENE
+		{
+			std::vector<MODEL>							models;
+			SKYBOX										skybox;
+			Microsoft::WRL::ComPtr<ID3D11InputLayout>	inputLayout;
+			Microsoft::WRL::ComPtr<ID3D11VertexShader>	vertexShader;
+			Microsoft::WRL::ComPtr<ID3D11PixelShader>	pixelShader;
+			Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
+		};
+		SCENE m_scene;
+		
 		// CUBE
 		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayout;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
@@ -89,14 +96,9 @@ namespace DX11UWA
 		Microsoft::WRL::ComPtr<ID3D11VertexShader>	m_vertexShader;
 		Microsoft::WRL::ComPtr<ID3D11PixelShader>	m_pixelShader;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_constantBuffer;
+		ModelViewProjectionConstantBuffer			m_constantBufferData;
+		uint32										m_indexCount;
 		// END CUBE
-
-		// Texture variables
-		CComPtr<ID3D11ShaderResourceView>	m_texture;
-
-		// System resources for cube geometry.
-		ModelViewProjectionConstantBuffer	m_constantBufferData;
-		uint32	m_indexCount;
 
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;

@@ -110,6 +110,9 @@
     <Image Include="Assets\IceFlow.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\ahri.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -123,6 +126,9 @@
       <Filter>Assets</Filter>
     </None>
     <None Include="Assets\katarina.obj">
+      <Filter>Assets</Filter>
+    </None>
+    <None Include="Assets\ahri.obj">
       <Filter>Assets</Filter>
     </None>
   </ItemGroup>
