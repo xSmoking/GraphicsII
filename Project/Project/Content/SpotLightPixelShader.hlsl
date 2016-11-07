@@ -15,12 +15,12 @@ float4 main(PixelShaderInput input) : SV_TARGET
 		discard;
 
 	float4 lightPos = float4(12, 20, 0, 0);
-	float4 lightColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+	float4 lightColor = float4(1, 1, 1, 0);
 	float4 coneDir = float4(7, 20, -13, 0);
 
 	float4 lightDir = normalize(lightPos - input.pos);
 	float4 surfaceRatio = saturate(dot(-lightDir, coneDir));
-	float4 spotFactor = (surfaceRatio > 0.5) ? 1 : 0;
+	float4 spotFactor = (surfaceRatio > 0.5) ? 1 : 0.1f;
 	float4 lightRatio = saturate(dot(lightDir, input.normal));
 	float4 result = lightRatio * lightColor * surfaceColor;
 	return result;

@@ -21,6 +21,7 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	m_currMousePos = nullptr;
 	m_prevMousePos = nullptr;
 	memset(&m_camera, 0, sizeof(XMFLOAT4X4));
+	srand(time(nullptr));
 
 	ID3D11SamplerState *samplerState;
 	D3D11_SAMPLER_DESC samplerDesc;
@@ -132,7 +133,7 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 // Rotate the 3D cube model a set amount of radians.
 void Sample3DSceneRenderer::TranslateAndRotate(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 pos, float radians)
 {
-	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixRotationY(radians) * XMMatrixTranslation(pos.x, pos.y, pos.z) * XMMatrixRotationY(radians)));
+	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixRotationY(radians) * XMMatrixTranslation(pos.x, pos.y, pos.z)));
 }
 
 void Sample3DSceneRenderer::Rotate(ModelViewProjectionConstantBuffer &objectM, float radians)
@@ -326,6 +327,28 @@ void Sample3DSceneRenderer::Render(void)
 		if(models[i].m_render)
 			context->DrawIndexed(models[i].m_indexCount, 0, 0);
 	}
+
+	// INSTANCE STUFF
+	ID3D11ShaderResourceView *instaceShaderResourceView[] = { models[0].m_texture };
+	context->PSSetShaderResources(0, 1, instaceShaderResourceView);
+	unsigned int strides[2];
+	unsigned int offsets[2];
+	Microsoft::WRL::ComPtr<ID3D11Buffer> bufferPointers[2];
+	strides[0] = sizeof(XMFLOAT4) * 3;
+	strides[1] = sizeof(INSTANCE);
+	offsets[0] = 0;
+	offsets[1] = 0;
+
+	bufferPointers[0] = models[0].m_vertexBuffer;
+	bufferPointers[1] = m_instanceBuffer;
+
+	context->UpdateSubresource1(m_modelConstantBuffer.Get(), 0, NULL, &models[0].m_constantBufferData, 0, 0, 0);
+	context->IASetVertexBuffers(0, 2, bufferPointers->GetAddressOf(), strides, offsets);
+	context->IASetIndexBuffer(models[0].m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	context->IASetInputLayout(m_modelInputLayout.Get());
+	context->DrawIndexedInstanced(models[0].m_indexCount, m_instanceCount, 0, 0, 0);
+	// END INSTANCE BUFFER
 
 	ID3D11ShaderResourceView *shaderResourceView[] = { m_skyboxTexture };
 	context->PSSetShaderResources(0, 1, shaderResourceView);
@@ -567,6 +590,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "COLOR", 1, DXGI_FORMAT_R32G32B32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		};
 
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateInputLayout(vertexDesc, ARRAYSIZE(vertexDesc), &fileData[0], fileData.size(), &m_modelInputLayout));
@@ -629,6 +653,36 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &models[0].m_indexBuffer));
+
+			INSTANCE *instance;
+			D3D11_BUFFER_DESC instanceDesc;
+			D3D11_SUBRESOURCE_DATA instanceSubresource;
+			m_instanceCount = 10;
+			instance = new INSTANCE[m_instanceCount];
+			for(int i = 0; i < m_instanceCount; ++i)
+			{
+				XMFLOAT4 position;
+				position.x = (rand() % 10) + 1;
+				position.y = (rand() % 10) + 1;
+				position.z = (rand() % 10) + 1;
+				position.w = 1;
+				instance[i].position = position;
+			}
+			instanceDesc.Usage = D3D11_USAGE_DEFAULT;
+			instanceDesc.ByteWidth = sizeof(INSTANCE) * m_instanceCount;
+			instanceDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			instanceDesc.CPUAccessFlags = 0;
+			instanceDesc.MiscFlags = 0;
+			instanceDesc.StructureByteStride = 0;
+
+			instanceSubresource.pSysMem = instance;
+			instanceSubresource.SysMemPitch = 0;
+			instanceSubresource.SysMemSlicePitch = 0;
+
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&instanceDesc, &instanceSubresource, &m_instanceBuffer));
+
+			delete[] instance;
+			instance = nullptr;
 		}
 	});
 

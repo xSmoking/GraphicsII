@@ -43,6 +43,13 @@ namespace DX11UWA
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
+		struct INSTANCE
+		{
+			DirectX::XMFLOAT4 position;
+		};
+		uint32 m_instanceCount;
+		Microsoft::WRL::ComPtr<ID3D11Buffer> m_instanceBuffer;
+
 		struct MODEL
 		{
 			ModelViewProjectionConstantBuffer		m_constantBufferData;

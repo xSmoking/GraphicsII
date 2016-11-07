@@ -12,6 +12,7 @@ struct VertexShaderInput
 	float4 pos : POSITION;
 	float4 color : COLOR;
 	float4 normal : NORMAL;
+	float4 instancePos : COLOR1;
 };
 
 // Per-pixel color data passed through the pixel shader.
@@ -27,6 +28,9 @@ PixelShaderInput main(VertexShaderInput input)
 {
 	PixelShaderInput output;
 	float4 pos = input.pos;
+
+	matrix world = model;
+	world[3].xyz += input.instancePos.xyz;
 
 	// Transform the vertex position into projected space.
 	pos = mul(pos, model);
