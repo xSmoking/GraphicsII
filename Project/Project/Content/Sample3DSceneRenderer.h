@@ -43,6 +43,14 @@ namespace DX11UWA
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
+		struct LIGHT
+		{
+			DirectX::XMFLOAT4 color;
+			DirectX::XMFLOAT4 position;
+			DirectX::XMFLOAT4 direction;
+			DirectX::XMFLOAT4 radius;
+		};
+
 		struct INSTANCE
 		{
 			DirectX::XMFLOAT4 position;
@@ -86,6 +94,9 @@ namespace DX11UWA
 			Microsoft::WRL::ComPtr<ID3D11VertexShader>	vertexShader;
 			Microsoft::WRL::ComPtr<ID3D11PixelShader>	pixelShader;
 			Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
+			LIGHT										directionLight;
+			LIGHT										pointLight;
+			LIGHT										spotLight;
 		};
 		SCENE m_scene;
 		
