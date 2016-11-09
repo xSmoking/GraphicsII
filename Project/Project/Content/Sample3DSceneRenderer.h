@@ -45,15 +45,14 @@ namespace DX11UWA
 
 		struct LIGHT
 		{
-			DirectX::XMFLOAT4 color;
-			DirectX::XMFLOAT4 position;
-			DirectX::XMFLOAT4 direction;
-			DirectX::XMFLOAT4 radius;
+			DirectX::XMFLOAT4	color;
+			DirectX::XMFLOAT4	position;
+			DirectX::XMFLOAT4	coneDirection;
 		};
 
 		struct INSTANCE
 		{
-			DirectX::XMFLOAT4 position;
+			DirectX::XMFLOAT3 position;
 		};
 		uint32 m_instanceCount;
 		Microsoft::WRL::ComPtr<ID3D11Buffer> m_instanceBuffer;
@@ -94,9 +93,9 @@ namespace DX11UWA
 			Microsoft::WRL::ComPtr<ID3D11VertexShader>	vertexShader;
 			Microsoft::WRL::ComPtr<ID3D11PixelShader>	pixelShader;
 			Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
-			LIGHT										directionLight;
-			LIGHT										pointLight;
-			LIGHT										spotLight;
+			float										lightType;
+			LIGHT										*light;
+			ID3D11Buffer								*lightBuffer;
 		};
 		SCENE m_scene;
 		

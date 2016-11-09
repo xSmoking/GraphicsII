@@ -140,6 +140,9 @@
     <None Include="Assets\cathedral\floor.obj">
       <Filter>Assets\cathedral</Filter>
     </None>
+    <None Include="Assets\cathedral\cathedral.obj">
+      <Filter>Assets\cathedral</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\ModelVertexShader.hlsl">

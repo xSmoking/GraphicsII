@@ -2,8 +2,7 @@
 struct PixelShaderInput
 {
 	float4 pos : SV_POSITION;
-	float4 color : COLOR;
-	float4 normal : NORMAL;
+	float3 color : COLOR;
 };
 
 textureCUBE env : register(t0);

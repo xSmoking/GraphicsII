@@ -30,26 +30,30 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MaxAnisotropy = (UINT)1.0f;
+	samplerDesc.MaxAnisotropy = 1.0f;
 	samplerDesc.MipLODBias = 1.0f;
 	m_deviceResources->GetD3DDevice()->CreateSamplerState(&samplerDesc, &samplerState);
+	m_deviceResources->GetD3DDeviceContext()->PSSetSamplers(1, 1, &samplerState);
 	m_deviceResources->GetD3DDeviceContext()->PSSetSamplers(0, 1, &samplerState);
+
+	// LIGHT INIT
+	D3D11_BUFFER_DESC lightBufferDesc;
+	lightBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	lightBufferDesc.ByteWidth = sizeof(LIGHT);
+	lightBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	lightBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	lightBufferDesc.MiscFlags = 0;
+	lightBufferDesc.StructureByteStride = 0;
+	m_deviceResources->GetD3DDevice()->CreateBuffer(&lightBufferDesc, nullptr, &m_scene.lightBuffer);
+	m_scene.lightType = 0.0f;
 
 	// Initialize Models
 	MODEL Katarina, Ahri;
-	MODEL cathedral_floor;
 	Katarina.m_position = XMFLOAT3(-2.0f, 0, 0);
-	Ahri.m_position = XMFLOAT3(2.0f, 0, 0);
+	Ahri.m_position = XMFLOAT3(0, 6.0f, 5.0f);
 
 	m_scene.models.push_back(Katarina);
 	m_scene.models.push_back(Ahri);
-	m_scene.models.push_back(cathedral_floor);
-
-	// Initialize Lights
-	m_scene.directionLight.color = XMFLOAT4(1, 1, 1, 0);
-	m_scene.directionLight.position = XMFLOAT4(2.0f, 0, 0, 0);
-	m_scene.pointLight.color = XMFLOAT4(1, 0, 0, 0);
-	m_scene.pointLight.position = XMFLOAT4(0, 0, 0, 0);
 
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
@@ -134,9 +138,7 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 
 		Translate(m_scene.models[0].m_constantBufferData, m_scene.models[0].m_position);
 		Translate(m_scene.models[1].m_constantBufferData, m_scene.models[1].m_position);
-		Translate(m_scene.models[2].m_constantBufferData, m_scene.models[2].m_position);
 	}
-
 	
 	StaticSkybox(m_scene.skybox.m_constantBufferData, XMFLOAT3(m_camera._41, m_camera._42, m_camera._43));
 
@@ -215,6 +217,18 @@ void Sample3DSceneRenderer::UpdateCamera(DX::StepTimer const& timer, float const
 		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
 		XMStoreFloat4x4(&m_camera, result);
+	}
+	if (m_kbuttons['1'])
+	{
+		m_scene.lightType = 1;
+	}
+	if (m_kbuttons['2'])
+	{
+		m_scene.lightType = 2;
+	}
+	if (m_kbuttons['3'])
+	{
+		m_scene.lightType = 3;
 	}
 
 	if (m_currMousePos)
@@ -316,20 +330,27 @@ void Sample3DSceneRenderer::Render(void)
 	//context->DrawIndexed(m_indexCount, 0, 0);
 
 	// MY STUFF
+	D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+	m_deviceResources->GetD3DDeviceContext()->Map(m_scene.lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
+	m_scene.light = (LIGHT*)mappedSubresource.pData;
+	m_scene.light->position = XMFLOAT4(-3.0f, 0.5f, 0, m_scene.lightType);
+	m_scene.light->color = XMFLOAT4(1, 1, 1, 0);
+	m_scene.light->coneDirection = XMFLOAT4(-1, 3.0f, 1.0f, 0.8f);
+	m_deviceResources->GetD3DDeviceContext()->Unmap(m_scene.lightBuffer, 0);
+	m_deviceResources->GetD3DDeviceContext()->PSSetConstantBuffers(0, 1, &m_scene.lightBuffer);
+
 	for(size_t i = 0; i < m_scene.models.size(); ++i)
 	{
 		ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.models[i].m_texture };
-		context->PSSetShaderResources(0, 1, shaderResourceView);
+		context->PSSetShaderResources(1, 1, shaderResourceView);
 
 		m_scene.models[i].m_constantBufferData.view = m_constantBufferData.view;
 		m_scene.models[i].m_constantBufferData.projection = m_constantBufferData.projection;
-
 		context->UpdateSubresource1(m_scene.constantBuffer.Get(), 0, NULL, &m_scene.models[i].m_constantBufferData, 0, 0, 0);
 
 		stride = sizeof(VertexPositionUVNormal);
 		offset = 0;
 		context->IASetVertexBuffers(0, 1, m_scene.models[i].m_vertexBuffer.GetAddressOf(), &stride, &offset);
-
 		context->IASetIndexBuffer(m_scene.models[i].m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		context->IASetInputLayout(m_scene.inputLayout.Get());
@@ -344,7 +365,7 @@ void Sample3DSceneRenderer::Render(void)
 
 	// INSTANCE STUFF
 	ID3D11ShaderResourceView *instaceShaderResourceView[] = { m_scene.models[0].m_texture };
-	context->PSSetShaderResources(0, 1, instaceShaderResourceView);
+	context->PSSetShaderResources(1, 1, instaceShaderResourceView);
 	UINT strides[2];
 	UINT offsets[2];
 	Microsoft::WRL::ComPtr<ID3D11Buffer> bufferPointers[2];
@@ -591,9 +612,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	auto loadPSModel = DX::ReadDataAsync(L"ModelPixelShader.cso"); // MOdel Pixel Shader
 	auto loadVSSkyboxTask = DX::ReadDataAsync(L"SkyboxVertexShader.cso"); // Skybox Vertex Shader
 	auto loadPSSkyboxTask = DX::ReadDataAsync(L"SkyboxPixelShader.cso"); // Skybox Pixel Shader
-	auto loadPSDirectionalLight = DX::ReadDataAsync(L"DirectionalLightPixelShader.cso"); // Directional Light PS
-	auto loadPSPointLight = DX::ReadDataAsync(L"PointLightPixelShader.cso"); // Directional Light PS
-	auto loadPSSpotLight = DX::ReadDataAsync(L"SpotLightPixelShader.cso"); // Directional Light PS
 
 	auto createVSModel = loadVSModel.then([this](const std::vector<byte>& fileData)
 	{
@@ -604,7 +622,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "COLOR", 1, DXGI_FORMAT_R32G32B32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
+			{ "INST_POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 		};
 
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateInputLayout(vertexDesc, ARRAYSIZE(vertexDesc), &fileData[0], fileData.size(), &m_scene.inputLayout));
@@ -617,21 +635,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		CD3D11_BUFFER_DESC constantBufferDesc(sizeof(ModelViewProjectionConstantBuffer), D3D11_BIND_CONSTANT_BUFFER);
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&constantBufferDesc, nullptr, &m_scene.constantBuffer));
 	});
-
-	auto createPSDirectionalLight = loadPSDirectionalLight.then([this](const std::vector<byte>& fileData)
-	{
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &m_scene.pixelShader));
-	});
-
-	//auto createPSPointLight = loadPSPointLight.then([this](const std::vector<byte>& fileData)
-	//{
-	//	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &m_scene.pixelShader));
-	//});
-
-	//auto createPSSpotLight = loadPSSpotLight.then([this](const std::vector<byte>& fileData)
-	//{
-	//	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &m_scene.pixelShader));
-	//});
 
 	auto createVSSkyboxTask = loadVSSkyboxTask.then([this](const std::vector<byte>& fileData)
 	{
@@ -668,22 +671,18 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[0].m_indexBuffer));
 
-			m_instanceCount = 3;
+			m_instanceCount = 15;
 			std::vector<INSTANCE> instances;
+			int posX = -2;
 			for(size_t i = 0; i < m_instanceCount; ++i)
 			{
 				INSTANCE instance;
-				instance.position.x = float((rand() % 5) + 1);
-				instance.position.y = float((rand() % 5) + 1);
-				instance.position.z = float((rand() % 5) + 1);
-				instance.position.w = 1;
+				instance.position.x = float(posX);
+				instance.position.y = 0.0f;
+				instance.position.z = 0.0f;
 				instances.push_back(instance);
+				posX += 3;
 			}
-
-			D3D11_SUBRESOURCE_DATA instanceSubresource;
-			instanceSubresource.pSysMem = instances.data();
-			instanceSubresource.SysMemPitch = 0;
-			instanceSubresource.SysMemSlicePitch = 0;
 
 			D3D11_BUFFER_DESC instanceDesc;
 			instanceDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -692,6 +691,11 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			instanceDesc.CPUAccessFlags = 0;
 			instanceDesc.MiscFlags = 0;
 			instanceDesc.StructureByteStride = 0;
+
+			D3D11_SUBRESOURCE_DATA instanceSubresource;
+			instanceSubresource.pSysMem = instances.data();
+			instanceSubresource.SysMemPitch = 0;
+			instanceSubresource.SysMemSlicePitch = 0;
 
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&instanceDesc, &instanceSubresource, &m_instanceBuffer));
 		}
@@ -721,33 +725,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[1].m_indexBuffer));
-		}
-	});
-
-	auto createCathedralFloor = (createPSModel && createVSModel).then([this]()
-	{
-		std::vector<VertexPositionUVNormal> verts;
-		std::vector<unsigned int> inds;
-
-		if (LoadObject("Assets/cathedral/floor.obj", verts, inds, 30))
-		{
-			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/cathedral/floor.dds", nullptr, &m_scene.models[2].m_texture));
-
-			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
-			vertexBufferData.pSysMem = verts.data();
-			vertexBufferData.SysMemPitch = 0;
-			vertexBufferData.SysMemSlicePitch = 0;
-			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VertexPositionUVNormal) * verts.size(), D3D11_BIND_VERTEX_BUFFER);
-			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &m_scene.models[2].m_vertexBuffer));
-
-			m_scene.models[2].m_indexCount = inds.size();
-
-			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
-			indexBufferData.pSysMem = inds.data();
-			indexBufferData.SysMemPitch = 0;
-			indexBufferData.SysMemSlicePitch = 0;
-			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
-			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[2].m_indexBuffer));
 		}
 	});
 
