@@ -40,7 +40,7 @@ namespace DX11UWA
 		void Translate(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 pos);
 		void StaticSkybox(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 pos);
 		void Orbit(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 radians, DirectX::XMFLOAT3 orbitpos, DirectX::XMFLOAT3 orbitness);
-		void UpdateCamera(DX::StepTimer const& timer, float const moveSpd, float const rotSpd);
+		void UpdateCamera(DirectX::XMFLOAT4X4 camera, DX::StepTimer const& timer, float const moveSpd, float const rotSpd);
 
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
@@ -101,6 +101,7 @@ namespace DX11UWA
 			float										lightType;
 			LIGHT										*light;
 			ID3D11Buffer								*lightBuffer;
+			std::vector<DirectX::XMFLOAT4X4>			camera;
 		};
 		SCENE m_scene;
 		
