@@ -16,9 +16,11 @@ namespace DX11UWA
 
 		bool LoadObject(const char *_path, std::vector<VertexPositionUVNormal> &_verts, std::vector<unsigned int> &_inds, const float resizeFactor);
 
+		void CreateViewports(void);
 		void CreateDeviceDependentResources(void);
 		void CreateWindowSizeDependentResources(void);
 		void ReleaseDeviceDependentResources(void);
+		void DrawScene(void);
 		void Update(DX::StepTimer const& timer);
 		void Render(void);
 		void StartTracking(void);
@@ -54,8 +56,6 @@ namespace DX11UWA
 		{
 			DirectX::XMFLOAT3 position;
 		};
-		uint32 m_instanceCount;
-		Microsoft::WRL::ComPtr<ID3D11Buffer> m_instanceBuffer;
 
 		struct MODEL
 		{
@@ -66,11 +66,15 @@ namespace DX11UWA
 			uint32									m_indexCount;
 			DirectX::XMFLOAT3						m_position;
 			bool									m_render;
+			bool									m_instantiate;
+			uint32									m_instanceCount;
+			Microsoft::WRL::ComPtr<ID3D11Buffer>	m_instanceBuffer;
 
 			MODEL()
 			{
 				m_position = DirectX::XMFLOAT3(0, 0, 0);
 				m_render = true;
+				m_instantiate = false;
 			}
 		};
 		
@@ -93,6 +97,7 @@ namespace DX11UWA
 			Microsoft::WRL::ComPtr<ID3D11VertexShader>	vertexShader;
 			Microsoft::WRL::ComPtr<ID3D11PixelShader>	pixelShader;
 			Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
+			std::vector<D3D11_VIEWPORT>					viewports;
 			float										lightType;
 			LIGHT										*light;
 			ID3D11Buffer								*lightBuffer;

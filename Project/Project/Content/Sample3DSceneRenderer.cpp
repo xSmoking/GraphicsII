@@ -30,7 +30,7 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	samplerDesc.MaxAnisotropy = 1.0f;
+	samplerDesc.MaxAnisotropy = (UINT)1.0f;
 	samplerDesc.MipLODBias = 1.0f;
 	m_deviceResources->GetD3DDevice()->CreateSamplerState(&samplerDesc, &samplerState);
 	m_deviceResources->GetD3DDeviceContext()->PSSetSamplers(1, 1, &samplerState);
@@ -55,6 +55,7 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	m_scene.models.push_back(Katarina);
 	m_scene.models.push_back(Ahri);
 
+	CreateViewports();
 	CreateDeviceDependentResources();
 	CreateWindowSizeDependentResources();
 }
@@ -309,103 +310,12 @@ void Sample3DSceneRenderer::Render(void)
 	auto context = m_deviceResources->GetD3DDeviceContext();
 	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_camera))));
 
-	// CUBE STUFF
-	// Prepare the constant buffer to send it to the graphics device.
-	context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0, 0);
-	// Each vertex is one instance of the VertexPositionColor struct.
-	UINT stride = sizeof(VertexPositionColor);
-	UINT offset = 0;
-	context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
-	// Each index is one 16-bit unsigned integer (short).
-	context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	context->IASetInputLayout(m_inputLayout.Get());
-	// Attach our vertex shader.
-	context->VSSetShader(m_vertexShader.Get(), nullptr, 0);
-	// Send the constant buffer to the graphics device.
-	context->VSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
-	// Attach our pixel shader.
-	context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
-	// Draw the objects.
-	//context->DrawIndexed(m_indexCount, 0, 0);
-
-	// MY STUFF
-	D3D11_MAPPED_SUBRESOURCE mappedSubresource;
-	m_deviceResources->GetD3DDeviceContext()->Map(m_scene.lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
-	m_scene.light = (LIGHT*)mappedSubresource.pData;
-	m_scene.light->position = XMFLOAT4(-3.0f, 0.5f, 0, m_scene.lightType);
-	m_scene.light->color = XMFLOAT4(1, 1, 1, 0);
-	m_scene.light->coneDirection = XMFLOAT4(-1, 3.0f, 1.0f, 0.8f);
-	m_deviceResources->GetD3DDeviceContext()->Unmap(m_scene.lightBuffer, 0);
-	m_deviceResources->GetD3DDeviceContext()->PSSetConstantBuffers(0, 1, &m_scene.lightBuffer);
-
-	for(size_t i = 0; i < m_scene.models.size(); ++i)
+	// viewport
+	for(size_t i = 0; i < m_scene.viewports.size(); ++i)
 	{
-		ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.models[i].m_texture };
-		context->PSSetShaderResources(1, 1, shaderResourceView);
-
-		m_scene.models[i].m_constantBufferData.view = m_constantBufferData.view;
-		m_scene.models[i].m_constantBufferData.projection = m_constantBufferData.projection;
-		context->UpdateSubresource1(m_scene.constantBuffer.Get(), 0, NULL, &m_scene.models[i].m_constantBufferData, 0, 0, 0);
-
-		stride = sizeof(VertexPositionUVNormal);
-		offset = 0;
-		context->IASetVertexBuffers(0, 1, m_scene.models[i].m_vertexBuffer.GetAddressOf(), &stride, &offset);
-		context->IASetIndexBuffer(m_scene.models[i].m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		context->IASetInputLayout(m_scene.inputLayout.Get());
-
-		context->VSSetShader(m_scene.vertexShader.Get(), nullptr, 0);
-		context->VSSetConstantBuffers1(0, 1, m_scene.constantBuffer.GetAddressOf(), nullptr, nullptr);
-		context->PSSetShader(m_scene.pixelShader.Get(), nullptr, 0);
-
-		if(m_scene.models[i].m_render)
-			context->DrawIndexed(m_scene.models[i].m_indexCount, 0, 0);
+		m_deviceResources->GetD3DDeviceContext()->RSSetViewports(1, &m_scene.viewports[i]);
+		DrawScene();
 	}
-
-	// INSTANCE STUFF
-	ID3D11ShaderResourceView *instaceShaderResourceView[] = { m_scene.models[0].m_texture };
-	context->PSSetShaderResources(1, 1, instaceShaderResourceView);
-	UINT strides[2];
-	UINT offsets[2];
-	Microsoft::WRL::ComPtr<ID3D11Buffer> bufferPointers[2];
-	strides[0] = sizeof(VertexPositionUVNormal);
-	strides[1] = sizeof(INSTANCE);
-	offsets[0] = 0;
-	offsets[1] = 0;
-
-	bufferPointers[0] = m_scene.models[0].m_vertexBuffer;
-	bufferPointers[1] = m_instanceBuffer;
-
-	context->UpdateSubresource1(m_scene.constantBuffer.Get(), 0, NULL, &m_scene.models[0].m_constantBufferData, 0, 0, 0);
-	context->IASetVertexBuffers(0, 2, bufferPointers->GetAddressOf(), strides, offsets);
-	context->IASetIndexBuffer(m_scene.models[0].m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	context->IASetInputLayout(m_scene.inputLayout.Get());
-	context->DrawIndexedInstanced(m_scene.models[0].m_indexCount, m_instanceCount, 0, 0, 0);
-	// END INSTANCE BUFFER
-
-	ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.skybox.m_texture };
-	context->PSSetShaderResources(0, 1, shaderResourceView);
-
-	m_scene.skybox.m_constantBufferData.view = m_constantBufferData.view;
-	m_scene.skybox.m_constantBufferData.projection = m_constantBufferData.projection;
-
-	context->UpdateSubresource1(m_scene.constantBuffer.Get(), 0, NULL, &m_scene.skybox.m_constantBufferData, 0, 0, 0);
-
-	stride = sizeof(VertexPositionColor);
-	offset = 0;
-	context->IASetVertexBuffers(0, 1, m_scene.skybox.m_vertexBuffer.GetAddressOf(), &stride, &offset);
-
-	context->IASetIndexBuffer(m_scene.skybox.m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
-	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	context->IASetInputLayout(m_scene.inputLayout.Get());
-
-	context->VSSetShader(m_scene.skybox.m_vertexShader.Get(), nullptr, 0);
-	context->VSSetConstantBuffers1(0, 1, m_scene.constantBuffer.GetAddressOf(), nullptr, nullptr);
-	context->PSSetShader(m_scene.skybox.m_pixelShader.Get(), nullptr, 0);
-
-	context->DrawIndexed(m_scene.skybox.m_indexCount, 0, 0);
 }
 
 bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<VertexPositionUVNormal> &_verts, std::vector<unsigned int> &_inds, const float resizeFactor = 1.0f)
@@ -515,6 +425,27 @@ bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<VertexPosi
 	}
 
 	return true;
+}
+
+void Sample3DSceneRenderer::CreateViewports(void)
+{
+	D3D11_VIEWPORT viewport;
+	viewport.Width = m_deviceResources->GetOutputSize().Width;
+	viewport.Height = m_deviceResources->GetOutputSize().Height;
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+	viewport.TopLeftX = 0;
+	viewport.TopLeftY = 0;
+	m_scene.viewports.push_back(viewport);
+
+	D3D11_VIEWPORT viewport2;
+	viewport2.Width = m_deviceResources->GetOutputSize().Width / 2;
+	viewport2.Height = m_deviceResources->GetOutputSize().Height / 2;
+	viewport2.MinDepth = 0.0f;
+	viewport2.MaxDepth = 1.0f;
+	viewport2.TopLeftX = 0;
+	viewport2.TopLeftY = 0;
+	m_scene.viewports.push_back(viewport2);
 }
 
 void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
@@ -671,10 +602,11 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[0].m_indexBuffer));
 
-			m_instanceCount = 15;
+			m_scene.models[0].m_instantiate = true;
+			m_scene.models[0].m_instanceCount = 15;
 			std::vector<INSTANCE> instances;
 			int posX = -2;
-			for(size_t i = 0; i < m_instanceCount; ++i)
+			for(size_t i = 0; i < m_scene.models[0].m_instanceCount; ++i)
 			{
 				INSTANCE instance;
 				instance.position.x = float(posX);
@@ -697,7 +629,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			instanceSubresource.SysMemPitch = 0;
 			instanceSubresource.SysMemSlicePitch = 0;
 
-			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&instanceDesc, &instanceSubresource, &m_instanceBuffer));
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&instanceDesc, &instanceSubresource, &m_scene.models[0].m_instanceBuffer));
 		}
 	});
 
@@ -781,6 +713,110 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		CD3D11_BUFFER_DESC indexBufferDesc(sizeof(skyboxIndices), D3D11_BIND_INDEX_BUFFER);
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.skybox.m_indexBuffer));
 	});
+}
+
+void Sample3DSceneRenderer::DrawScene(void)
+{
+	auto context = m_deviceResources->GetD3DDeviceContext();
+	// CUBE STUFF
+	// Prepare the constant buffer to send it to the graphics device.
+	context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &m_constantBufferData, 0, 0, 0);
+	// Each vertex is one instance of the VertexPositionColor struct.
+	UINT stride = sizeof(VertexPositionColor);
+	UINT offset = 0;
+	context->IASetVertexBuffers(0, 1, m_vertexBuffer.GetAddressOf(), &stride, &offset);
+	// Each index is one 16-bit unsigned integer (short).
+	context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	context->IASetInputLayout(m_inputLayout.Get());
+	// Attach our vertex shader.
+	context->VSSetShader(m_vertexShader.Get(), nullptr, 0);
+	// Send the constant buffer to the graphics device.
+	context->VSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
+	// Attach our pixel shader.
+	context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
+	// Draw the objects.
+	//context->DrawIndexed(m_indexCount, 0, 0);
+
+	// MY STUFF
+	// light
+	D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+	m_deviceResources->GetD3DDeviceContext()->Map(m_scene.lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
+	m_scene.light = (LIGHT*)mappedSubresource.pData;
+	m_scene.light->position = XMFLOAT4(-3.0f, 0.5f, 0, m_scene.lightType);
+	m_scene.light->color = XMFLOAT4(1, 1, 1, 0);
+	m_scene.light->coneDirection = XMFLOAT4(-1, 3.0f, 1.0f, 0.8f);
+	m_deviceResources->GetD3DDeviceContext()->Unmap(m_scene.lightBuffer, 0);
+	m_deviceResources->GetD3DDeviceContext()->PSSetConstantBuffers(0, 1, &m_scene.lightBuffer);
+
+	for (size_t i = 0; i < m_scene.models.size(); ++i)
+	{
+		ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.models[i].m_texture };
+		context->PSSetShaderResources(1, 1, shaderResourceView);
+
+		m_scene.models[i].m_constantBufferData.view = m_constantBufferData.view;
+		m_scene.models[i].m_constantBufferData.projection = m_constantBufferData.projection;
+		context->UpdateSubresource1(m_scene.constantBuffer.Get(), 0, NULL, &m_scene.models[i].m_constantBufferData, 0, 0, 0);
+
+		stride = sizeof(VertexPositionUVNormal);
+		offset = 0;
+		context->IASetVertexBuffers(0, 1, m_scene.models[i].m_vertexBuffer.GetAddressOf(), &stride, &offset);
+		context->IASetIndexBuffer(m_scene.models[i].m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		context->IASetInputLayout(m_scene.inputLayout.Get());
+
+		context->VSSetShader(m_scene.vertexShader.Get(), nullptr, 0);
+		context->VSSetConstantBuffers1(0, 1, m_scene.constantBuffer.GetAddressOf(), nullptr, nullptr);
+		context->PSSetShader(m_scene.pixelShader.Get(), nullptr, 0);
+
+		if (m_scene.models[i].m_render)
+			context->DrawIndexed(m_scene.models[i].m_indexCount, 0, 0);
+
+		if (m_scene.models[i].m_instantiate)
+		{
+			ID3D11ShaderResourceView *instaceShaderResourceView[] = { m_scene.models[i].m_texture };
+			context->PSSetShaderResources(1, 1, instaceShaderResourceView);
+			UINT strides[2];
+			UINT offsets[2];
+			Microsoft::WRL::ComPtr<ID3D11Buffer> bufferPointers[2];
+			strides[0] = sizeof(VertexPositionUVNormal);
+			strides[1] = sizeof(INSTANCE);
+			offsets[0] = 0;
+			offsets[1] = 0;
+
+			bufferPointers[0] = m_scene.models[i].m_vertexBuffer;
+			bufferPointers[1] = m_scene.models[i].m_instanceBuffer;
+
+			context->UpdateSubresource1(m_scene.constantBuffer.Get(), 0, NULL, &m_scene.models[i].m_constantBufferData, 0, 0, 0);
+			context->IASetVertexBuffers(0, 2, bufferPointers->GetAddressOf(), strides, offsets);
+			context->IASetIndexBuffer(m_scene.models[i].m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+			context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			context->IASetInputLayout(m_scene.inputLayout.Get());
+			context->DrawIndexedInstanced(m_scene.models[i].m_indexCount, m_scene.models[i].m_instanceCount, 0, 0, 0);
+		}
+	}
+
+	ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.skybox.m_texture };
+	context->PSSetShaderResources(0, 1, shaderResourceView);
+
+	m_scene.skybox.m_constantBufferData.view = m_constantBufferData.view;
+	m_scene.skybox.m_constantBufferData.projection = m_constantBufferData.projection;
+
+	context->UpdateSubresource1(m_scene.constantBuffer.Get(), 0, NULL, &m_scene.skybox.m_constantBufferData, 0, 0, 0);
+
+	stride = sizeof(VertexPositionColor);
+	offset = 0;
+	context->IASetVertexBuffers(0, 1, m_scene.skybox.m_vertexBuffer.GetAddressOf(), &stride, &offset);
+
+	context->IASetIndexBuffer(m_scene.skybox.m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	context->IASetInputLayout(m_scene.inputLayout.Get());
+
+	context->VSSetShader(m_scene.skybox.m_vertexShader.Get(), nullptr, 0);
+	context->VSSetConstantBuffers1(0, 1, m_scene.constantBuffer.GetAddressOf(), nullptr, nullptr);
+	context->PSSetShader(m_scene.skybox.m_pixelShader.Get(), nullptr, 0);
+
+	context->DrawIndexed(m_scene.skybox.m_indexCount, 0, 0);
 }
 
 void Sample3DSceneRenderer::ReleaseDeviceDependentResources(void)
