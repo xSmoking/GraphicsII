@@ -63,6 +63,7 @@ namespace DX11UWA
 			Microsoft::WRL::ComPtr<ID3D11Buffer>	m_vertexBuffer;
 			Microsoft::WRL::ComPtr<ID3D11Buffer>	m_indexBuffer;
 			CComPtr<ID3D11ShaderResourceView>		m_texture;
+			CComPtr<ID3D11ShaderResourceView>		m_textureNormal;
 			uint32									m_indexCount;
 			DirectX::XMFLOAT3						m_position;
 			bool									m_render;
@@ -81,6 +82,7 @@ namespace DX11UWA
 		struct SKYBOX
 		{
 			ModelViewProjectionConstantBuffer			m_constantBufferData;
+			ModelViewProjectionConstantBuffer			m_constantBufferData2;
 			Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
 			Microsoft::WRL::ComPtr<ID3D11Buffer>		m_indexBuffer;
 			CComPtr<ID3D11ShaderResourceView>			m_texture;
@@ -99,9 +101,9 @@ namespace DX11UWA
 			Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
 			std::vector<D3D11_VIEWPORT>					viewports;
 			float										lightType;
-			LIGHT										*light;
 			ID3D11Buffer								*lightBuffer;
 			std::vector<DirectX::XMFLOAT4X4>			camera;
+			Microsoft::WRL::ComPtr<ID3D11BlendState>	blendState;
 		};
 		SCENE m_scene;
 		
@@ -126,8 +128,8 @@ namespace DX11UWA
 		Windows::UI::Input::PointerPoint^ m_currMousePos;
 		Windows::UI::Input::PointerPoint^ m_prevMousePos;
 
-		// Matrix data member for the camera
-		DirectX::XMFLOAT4X4 m_camera;
+		// Light Variable
+		DirectX::XMFLOAT4 m_lightDirection;
 	};
 }
 

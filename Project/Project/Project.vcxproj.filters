@@ -119,6 +119,15 @@
     <Image Include="Assets\cathedral\floor.dds">
       <Filter>Assets\cathedral</Filter>
     </Image>
+    <Image Include="Assets\katarina_normal.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\TransparentGreen.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Crate.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -166,5 +175,10 @@
     <FxCompile Include="Content\SpotLightPixelShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="Assets\Crate.obj">
+      <Filter>Assets</Filter>
+    </Object>
   </ItemGroup>
 </Project>

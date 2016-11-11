@@ -20,12 +20,13 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	// Initialize Light
 	XMFLOAT4X4 camera;
 	m_scene.camera.push_back(camera);
+	m_scene.camera.push_back(camera);
 
 	memset(m_kbuttons, 0, sizeof(m_kbuttons));
 	m_currMousePos = nullptr;
 	m_prevMousePos = nullptr;
-	memset(&m_camera, 0, sizeof(XMFLOAT4X4));
 	memset(&m_scene.camera[0], 0, sizeof(XMFLOAT4X4));
+	memset(&m_scene.camera[1], 0, sizeof(XMFLOAT4X4));
 	srand(unsigned int(time(0)));
 
 	// Initialize Sampler State
@@ -51,14 +52,15 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	lightBufferDesc.MiscFlags = 0;
 	lightBufferDesc.StructureByteStride = 0;
 	m_deviceResources->GetD3DDevice()->CreateBuffer(&lightBufferDesc, nullptr, &m_scene.lightBuffer);
-	m_scene.lightType = 0.0f;
 
 	// Initialize Models
-	MODEL Katarina, Ahri;
+	MODEL Katarina, Ahri, Crate;
 	Katarina.m_position = XMFLOAT3(-2.0f, 0, 0);
 	Ahri.m_position = XMFLOAT3(0, 6.0f, 5.0f);
+	Crate.m_position = XMFLOAT3(30.0f, 3.0f, 0);
 	m_scene.models.push_back(Katarina);
 	m_scene.models.push_back(Ahri);
+	m_scene.models.push_back(Crate);
 
 	CreateViewports();
 	CreateDeviceDependentResources();
@@ -69,8 +71,8 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 void Sample3DSceneRenderer::CreateWindowSizeDependentResources(void)
 {
 	Size outputSize = m_deviceResources->GetOutputSize();
-	float aspectRatio = outputSize.Width / outputSize.Height;
-	float fovAngleY = 70.0f * XM_PI / 180.0f;
+	float aspectRatio = (outputSize.Width / 2) / outputSize.Height;
+	float fovAngleY = 50.0f * XM_PI / 180.0f;
 
 	// This is a simple example of change that can be made when the app is in
 	// portrait or snapped view.
@@ -98,10 +100,15 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources(void)
 	static const XMVECTORF32 eye = { 0.0f, 0.7f, -1.5f, 0.0f };
 	static const XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
 	static const XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
-
-	XMStoreFloat4x4(&m_camera, XMMatrixInverse(nullptr, XMMatrixLookAtLH(eye, at, up)));
 	XMStoreFloat4x4(&m_scene.camera[0], XMMatrixInverse(nullptr, XMMatrixLookAtLH(eye, at, up)));
+
+	static const XMVECTORF32 eye2 = { 0.0f, 7.0f, -1.5f, 0.0f };
+	static const XMVECTORF32 at2 = { 0.0f, -0.1f, 0.0f, 0.0f };
+	static const XMVECTORF32 up2 = { 0.0f, 1.0f, 0.0f, 0.0f };
+	XMStoreFloat4x4(&m_scene.camera[1], XMMatrixInverse(nullptr, XMMatrixLookAtLH(eye2, at2, up2)));
+
 	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixLookAtLH(eye, at, up)));
+	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixLookAtLH(eye2, at2, up2)));
 }
 
 XMFLOAT4 MatrixByVector(XMFLOAT4X4 matrix, XMFLOAT4 vector)
@@ -145,14 +152,22 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 
 		Translate(m_scene.models[0].m_constantBufferData, m_scene.models[0].m_position);
 		Translate(m_scene.models[1].m_constantBufferData, m_scene.models[1].m_position);
+		Translate(m_scene.models[2].m_constantBufferData, m_scene.models[2].m_position);
+
+		// Rotate Light
+		float radius = 7.0f;
+		float offset = 0;
+		XMFLOAT4 lightPos = XMFLOAT4(std::sin(totalRotation + offset) * radius, 7.0f, std::cos(totalRotation + offset) * radius, 1.0f);
+		XMVECTOR lightDir = XMVectorSet(-lightPos.x, -lightPos.y, -lightPos.z, 1.0f);
+		lightDir = XMVector3Normalize(lightDir);
+		XMStoreFloat4(&m_lightDirection, lightDir);
 	}
 	
-	StaticSkybox(m_scene.skybox.m_constantBufferData, XMFLOAT3(m_camera._41, m_camera._42, m_camera._43));
 	StaticSkybox(m_scene.skybox.m_constantBufferData, XMFLOAT3(m_scene.camera[0]._41, m_scene.camera[0]._42, m_scene.camera[0]._43));
 
 	// Update or move camera here
-	UpdateCamera(m_camera, timer, 5.0f, 0.75f);
 	UpdateCamera(m_scene.camera[0], timer, 5.0f, 0.75f);
+	//UpdateCamera(m_scene.camera[0], timer, 5.0f, 0.75f);
 }
 
 // Rotate the 3D cube model a set amount of radians.
@@ -176,11 +191,6 @@ void Sample3DSceneRenderer::StaticSkybox(ModelViewProjectionConstantBuffer &obje
 	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixTranslation(pos.x, pos.y, pos.z)) * XMMatrixScaling(110, 110, 110));
 }
 
-void Sample3DSceneRenderer::Orbit(ModelViewProjectionConstantBuffer &objectM, XMFLOAT3 radians, XMFLOAT3 orbitpos, XMFLOAT3 orbitness)
-{
-	XMStoreFloat4x4(&objectM.model, XMMatrixTranspose(XMMatrixTranslation(orbitness.x, orbitness.y, orbitness.z) * (XMMatrixRotationX(radians.x) * XMMatrixRotationY(radians.y) * XMMatrixRotationZ(radians.z)) * XMMatrixTranslation(orbitpos.x, orbitpos.y, orbitpos.z)));
-}
-
 void Sample3DSceneRenderer::UpdateCamera(XMFLOAT4X4 camera, DX::StepTimer const& timer, float const moveSpd, float const rotSpd)
 {
 	const float delta_time = (float)timer.GetElapsedSeconds();
@@ -188,44 +198,44 @@ void Sample3DSceneRenderer::UpdateCamera(XMFLOAT4X4 camera, DX::StepTimer const&
 	if (m_kbuttons['W'])
 	{
 		XMMATRIX translation = XMMatrixTranslation(0.0f, 0.0f, moveSpd * delta_time);
-		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
+		XMMATRIX temp_camera = XMLoadFloat4x4(&m_scene.camera[0]);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
-		XMStoreFloat4x4(&m_camera, result);
+		XMStoreFloat4x4(&m_scene.camera[0], result);
 	}
 	if (m_kbuttons['S'])
 	{
 		XMMATRIX translation = XMMatrixTranslation(0.0f, 0.0f, -moveSpd * delta_time);
-		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
+		XMMATRIX temp_camera = XMLoadFloat4x4(&m_scene.camera[0]);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
-		XMStoreFloat4x4(&m_camera, result);
+		XMStoreFloat4x4(&m_scene.camera[0], result);
 	}
 	if (m_kbuttons['A'])
 	{
 		XMMATRIX translation = XMMatrixTranslation(-moveSpd * delta_time, 0.0f, 0.0f);
-		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
+		XMMATRIX temp_camera = XMLoadFloat4x4(&m_scene.camera[0]);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
-		XMStoreFloat4x4(&m_camera, result);
+		XMStoreFloat4x4(&m_scene.camera[0], result);
 	}
 	if (m_kbuttons['D'])
 	{
 		XMMATRIX translation = XMMatrixTranslation(moveSpd * delta_time, 0.0f, 0.0f);
-		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
+		XMMATRIX temp_camera = XMLoadFloat4x4(&m_scene.camera[0]);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
-		XMStoreFloat4x4(&m_camera, result);
+		XMStoreFloat4x4(&m_scene.camera[0], result);
 	}
 	if (m_kbuttons['X'])
 	{
 		XMMATRIX translation = XMMatrixTranslation(0.0f, -moveSpd * delta_time, 0.0f);
-		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
+		XMMATRIX temp_camera = XMLoadFloat4x4(&m_scene.camera[0]);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
-		XMStoreFloat4x4(&m_camera, result);
+		XMStoreFloat4x4(&m_scene.camera[0], result);
 	}
 	if (m_kbuttons[VK_SPACE])
 	{
 		XMMATRIX translation = XMMatrixTranslation(0.0f, moveSpd * delta_time, 0.0f);
-		XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
+		XMMATRIX temp_camera = XMLoadFloat4x4(&m_scene.camera[0]);
 		XMMATRIX result = XMMatrixMultiply(translation, temp_camera);
-		XMStoreFloat4x4(&m_camera, result);
+		XMStoreFloat4x4(&m_scene.camera[0], result);
 	}
 	if (m_kbuttons['1'])
 	{
@@ -244,39 +254,55 @@ void Sample3DSceneRenderer::UpdateCamera(XMFLOAT4X4 camera, DX::StepTimer const&
 	{
 		if (m_currMousePos->Properties->IsRightButtonPressed && m_prevMousePos)
 		{
-			float dx = m_currMousePos->Position.X - m_prevMousePos->Position.X;
-			float dy = m_currMousePos->Position.Y - m_prevMousePos->Position.Y;
+			if(m_currMousePos->Position.X >= 0 && m_currMousePos->Position.X <= m_deviceResources->GetOutputSize().Width / 2)
+			{
+				float dx = m_currMousePos->Position.X - m_prevMousePos->Position.X;
+				float dy = m_currMousePos->Position.Y - m_prevMousePos->Position.Y;
 
-			XMFLOAT4 pos = XMFLOAT4(m_camera._41, m_camera._42, m_camera._43, m_camera._44);
-			XMFLOAT4 pos2 = XMFLOAT4(m_scene.camera[0]._41, m_scene.camera[0]._42, m_scene.camera[0]._43, m_scene.camera[0]._44);
+				XMFLOAT4 pos = XMFLOAT4(m_scene.camera[0]._41, m_scene.camera[0]._42, m_scene.camera[0]._43, m_scene.camera[0]._44);
 
-			m_camera._41 = 0;
-			m_camera._42 = 0;
-			m_camera._43 = 0;
-			m_scene.camera[0]._41 = 0;
-			m_scene.camera[0]._42 = 0;
-			m_scene.camera[0]._43 = 0;
+				m_scene.camera[0]._41 = 0;
+				m_scene.camera[0]._42 = 0;
+				m_scene.camera[0]._43 = 0;
 
-			XMMATRIX rotX = XMMatrixRotationX(dy * rotSpd * delta_time);
-			XMMATRIX rotY = XMMatrixRotationY(dx * rotSpd * delta_time);
+				XMMATRIX rotX = XMMatrixRotationX(dy * rotSpd * delta_time);
+				XMMATRIX rotY = XMMatrixRotationY(dx * rotSpd * delta_time);
 
-			XMMATRIX temp_camera = XMLoadFloat4x4(&m_camera);
-			temp_camera = XMMatrixMultiply(rotX, temp_camera);
-			temp_camera = XMMatrixMultiply(temp_camera, rotY);
+				XMMATRIX temp_camera = XMLoadFloat4x4(&m_scene.camera[0]);
+				temp_camera = XMMatrixMultiply(rotX, temp_camera);
+				temp_camera = XMMatrixMultiply(temp_camera, rotY);
+
+				XMStoreFloat4x4(&m_scene.camera[0], temp_camera);
+
+				m_scene.camera[0]._41 = pos.x;
+				m_scene.camera[0]._42 = pos.y;
+				m_scene.camera[0]._43 = pos.z;
+			}
+			else if(m_currMousePos->Position.X > m_deviceResources->GetOutputSize().Width / 2 && m_currMousePos->Position.X <= m_deviceResources->GetOutputSize().Width)
+			{
+				float dx = m_currMousePos->Position.X - m_prevMousePos->Position.X;
+				float dy = m_currMousePos->Position.Y - m_prevMousePos->Position.Y;
+
+				XMFLOAT4 pos = XMFLOAT4(m_scene.camera[1]._41, m_scene.camera[1]._42, m_scene.camera[1]._43, m_scene.camera[1]._44);
+
+				m_scene.camera[1]._41 = 0;
+				m_scene.camera[1]._42 = 0;
+				m_scene.camera[1]._43 = 0;
+
+				XMMATRIX rotX = XMMatrixRotationX(dy * rotSpd * delta_time);
+				XMMATRIX rotY = XMMatrixRotationY(dx * rotSpd * delta_time);
+
+				XMMATRIX temp_camera = XMLoadFloat4x4(&m_scene.camera[1]);
+				temp_camera = XMMatrixMultiply(rotX, temp_camera);
+				temp_camera = XMMatrixMultiply(temp_camera, rotY);
+
+				XMStoreFloat4x4(&m_scene.camera[1], temp_camera);
+
+				m_scene.camera[1]._41 = pos.x;
+				m_scene.camera[1]._42 = pos.y;
+				m_scene.camera[1]._43 = pos.z;
+			}
 			
-			XMMATRIX temp_camera2 = XMLoadFloat4x4(&m_scene.camera[0]);
-			temp_camera = XMMatrixMultiply(rotX, temp_camera);
-			temp_camera = XMMatrixMultiply(temp_camera, rotY);
-
-			XMStoreFloat4x4(&m_camera, temp_camera);
-			XMStoreFloat4x4(&m_scene.camera[0], temp_camera2);
-
-			m_camera._41 = pos.x;
-			m_camera._42 = pos.y;
-			m_camera._43 = pos.z;
-			m_scene.camera[0]._41 = pos.x;
-			m_scene.camera[0]._42 = pos.y;
-			m_scene.camera[0]._43 = pos.z;
 		}
 		m_prevMousePos = m_currMousePos;
 	}
@@ -328,13 +354,16 @@ void Sample3DSceneRenderer::Render(void)
 	}
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
-	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_camera))));
-	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_scene.camera[0]))));
 
-	// viewport
-	for(size_t i = 0; i < m_scene.viewports.size(); ++i)
+	for(size_t camera = 0; camera < m_scene.camera.size(); ++camera)
 	{
-		m_deviceResources->GetD3DDeviceContext()->RSSetViewports(1, &m_scene.viewports[i]);
+		XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_scene.camera[camera]))));
+
+		for (size_t i = 0; i < m_scene.models.size(); ++i)
+			XMStoreFloat4x4(&m_scene.models[i].m_constantBufferData.view, XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_scene.camera[camera]))));
+
+		XMStoreFloat4x4(&m_scene.skybox.m_constantBufferData.view, XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_scene.camera[camera]))));
+		m_deviceResources->GetD3DDeviceContext()->RSSetViewports(1, &m_scene.viewports[camera]);
 		DrawScene();
 	}
 }
@@ -451,7 +480,7 @@ bool Sample3DSceneRenderer::LoadObject(const char *_path, std::vector<VertexPosi
 void Sample3DSceneRenderer::CreateViewports(void)
 {
 	D3D11_VIEWPORT viewport;
-	viewport.Width = m_deviceResources->GetOutputSize().Width;
+	viewport.Width = m_deviceResources->GetOutputSize().Width / 2;
 	viewport.Height = m_deviceResources->GetOutputSize().Height;
 	viewport.MinDepth = 0.0f;
 	viewport.MaxDepth = 1.0f;
@@ -461,10 +490,10 @@ void Sample3DSceneRenderer::CreateViewports(void)
 
 	D3D11_VIEWPORT viewport2;
 	viewport2.Width = m_deviceResources->GetOutputSize().Width / 2;
-	viewport2.Height = m_deviceResources->GetOutputSize().Height / 2;
+	viewport2.Height = m_deviceResources->GetOutputSize().Height;
 	viewport2.MinDepth = 0.0f;
 	viewport2.MaxDepth = 1.0f;
-	viewport2.TopLeftX = 0;
+	viewport2.TopLeftX = m_deviceResources->GetOutputSize().Width / 2;
 	viewport2.TopLeftY = 0;
 	m_scene.viewports.push_back(viewport2);
 }
@@ -578,6 +607,10 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		};
 
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateInputLayout(vertexDesc, ARRAYSIZE(vertexDesc), &fileData[0], fileData.size(), &m_scene.inputLayout));
+
+		D3D11_RENDER_TARGET_BLEND_DESC renderBlendDesc = { true, D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_OP_ADD, D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD, D3D11_COLOR_WRITE_ENABLE_ALL };
+		D3D11_BLEND_DESC blendDesc = { true, true, renderBlendDesc };
+		m_deviceResources->GetD3DDevice()->CreateBlendState(&blendDesc, &m_scene.blendState);
 	});
 
 	auto createPSModel = loadPSModel.then([this](const std::vector<byte>& fileData)
@@ -606,6 +639,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		if (LoadObject("Assets/katarina.obj", verts, inds))
 		{
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/katarina.dds", nullptr, &m_scene.models[0].m_texture));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/katarina_normal.dds", nullptr, &m_scene.models[0].m_textureNormal));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -630,9 +664,9 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			for(size_t i = 0; i < m_scene.models[0].m_instanceCount; ++i)
 			{
 				INSTANCE instance;
-				instance.position.x = float(posX);
-				instance.position.y = 0.0f;
-				instance.position.z = 0.0f;
+				instance.position.x = float(rand() % 20);
+				instance.position.y = float(rand() % 20);
+				instance.position.z = float(rand() % 20);
 				instances.push_back(instance);
 				posX += 3;
 			}
@@ -678,6 +712,33 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[1].m_indexBuffer));
+		}
+	});
+
+	auto createCubeTeste = (createPSTask && createVSTask).then([this]()
+	{
+		std::vector<VertexPositionUVNormal> verts;
+		std::vector<unsigned int> inds;
+
+		if (LoadObject("Assets/Crate.obj", verts, inds))
+		{
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/TransparentGreen.dds", nullptr, &m_scene.models[2].m_texture));
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VertexPositionUVNormal) * verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &m_scene.models[2].m_vertexBuffer));
+
+			m_scene.models[2].m_indexCount = inds.size();
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = inds.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[2].m_indexBuffer));
 		}
 	});
 
@@ -760,20 +821,23 @@ void Sample3DSceneRenderer::DrawScene(void)
 	//context->DrawIndexed(m_indexCount, 0, 0);
 
 	// MY STUFF
-	// light
+	float blendFac[] = { 1, 1, 1, 1 };
+	context->OMSetBlendState(m_scene.blendState.Get(), blendFac, 0xFFFFFFFF);
+
 	D3D11_MAPPED_SUBRESOURCE mappedSubresource;
 	m_deviceResources->GetD3DDeviceContext()->Map(m_scene.lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
-	m_scene.light = (LIGHT*)mappedSubresource.pData;
-	m_scene.light->position = XMFLOAT4(-3.0f, 0.5f, 0, m_scene.lightType);
-	m_scene.light->color = XMFLOAT4(1, 1, 1, 0);
-	m_scene.light->coneDirection = XMFLOAT4(-1, 3.0f, 1.0f, 0.8f);
+	LIGHT *light;
+	light = (LIGHT*)mappedSubresource.pData;
+	light->position = XMFLOAT4(m_lightDirection.x, m_lightDirection.y, m_lightDirection.z, m_scene.lightType);
+	light->color = XMFLOAT4(1, 1, 1, 0);
+	light->coneDirection = XMFLOAT4(-1, 3.0f, 1.0f, 0.8f);
 	m_deviceResources->GetD3DDeviceContext()->Unmap(m_scene.lightBuffer, 0);
 	m_deviceResources->GetD3DDeviceContext()->PSSetConstantBuffers(0, 1, &m_scene.lightBuffer);
 
 	for (size_t i = 0; i < m_scene.models.size(); ++i)
 	{
-		ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.models[i].m_texture };
-		context->PSSetShaderResources(1, 1, shaderResourceView);
+		ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.models[i].m_texture, m_scene.models[i].m_textureNormal };
+		context->PSSetShaderResources(1, 2, shaderResourceView);
 
 		m_scene.models[i].m_constantBufferData.view = m_constantBufferData.view;
 		m_scene.models[i].m_constantBufferData.projection = m_constantBufferData.projection;
