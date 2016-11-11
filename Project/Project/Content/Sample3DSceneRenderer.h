@@ -39,7 +39,6 @@ namespace DX11UWA
 		void Rotate(ModelViewProjectionConstantBuffer &objectM, float radians);
 		void Translate(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 pos);
 		void StaticSkybox(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 pos);
-		void Orbit(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 radians, DirectX::XMFLOAT3 orbitpos, DirectX::XMFLOAT3 orbitness);
 		void UpdateCamera(DirectX::XMFLOAT4X4 camera, DX::StepTimer const& timer, float const moveSpd, float const rotSpd);
 
 		// Cached pointer to device resources.

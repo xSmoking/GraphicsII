@@ -54,13 +54,18 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	m_deviceResources->GetD3DDevice()->CreateBuffer(&lightBufferDesc, nullptr, &m_scene.lightBuffer);
 
 	// Initialize Models
-	MODEL Katarina, Ahri, Crate;
-	Katarina.m_position = XMFLOAT3(-2.0f, 0, 0);
-	Ahri.m_position = XMFLOAT3(0, 6.0f, 5.0f);
-	Crate.m_position = XMFLOAT3(30.0f, 3.0f, 0);
+	MODEL Katarina, Ahri, Crate, Floor, MedievalHouse, Tree;
+	Katarina.m_position = XMFLOAT3(-1.0f, 0.5f, 0);
+	Ahri.m_position = XMFLOAT3(6.0f, 0.5f, 2.0f);
+	Crate.m_position = XMFLOAT3(3.0f, 1.5f, 0.5f);
+	MedievalHouse.m_position = XMFLOAT3(5.0f, 0.5f, 29.0f);
+	Tree.m_position = XMFLOAT3(20.0f, 0, 35.0f);
 	m_scene.models.push_back(Katarina);
 	m_scene.models.push_back(Ahri);
 	m_scene.models.push_back(Crate);
+	m_scene.models.push_back(Floor);
+	m_scene.models.push_back(MedievalHouse);
+	m_scene.models.push_back(Tree);
 
 	CreateViewports();
 	CreateDeviceDependentResources();
@@ -150,10 +155,6 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 		double totalRotation = timer.GetTotalSeconds() * radiansPerSecond;
 		float radians = static_cast<float>(fmod(totalRotation, XM_2PI));
 
-		Translate(m_scene.models[0].m_constantBufferData, m_scene.models[0].m_position);
-		Translate(m_scene.models[1].m_constantBufferData, m_scene.models[1].m_position);
-		Translate(m_scene.models[2].m_constantBufferData, m_scene.models[2].m_position);
-
 		// Rotate Light
 		float radius = 7.0f;
 		float offset = 0;
@@ -163,6 +164,13 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 		XMStoreFloat4(&m_lightDirection, lightDir);
 	}
 	
+	Translate(m_scene.models[0].m_constantBufferData, m_scene.models[0].m_position);
+	Translate(m_scene.models[1].m_constantBufferData, m_scene.models[1].m_position);
+	Translate(m_scene.models[2].m_constantBufferData, m_scene.models[2].m_position);
+	Translate(m_scene.models[3].m_constantBufferData, m_scene.models[3].m_position);
+	TranslateAndRotate(m_scene.models[4].m_constantBufferData, m_scene.models[4].m_position, 3.05433f);
+	Translate(m_scene.models[5].m_constantBufferData, m_scene.models[5].m_position);
+
 	StaticSkybox(m_scene.skybox.m_constantBufferData, XMFLOAT3(m_scene.camera[0]._41, m_scene.camera[0]._42, m_scene.camera[0]._43));
 
 	// Update or move camera here
@@ -656,35 +664,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[0].m_indexBuffer));
-
-			m_scene.models[0].m_instantiate = true;
-			m_scene.models[0].m_instanceCount = 15;
-			std::vector<INSTANCE> instances;
-			int posX = -2;
-			for(size_t i = 0; i < m_scene.models[0].m_instanceCount; ++i)
-			{
-				INSTANCE instance;
-				instance.position.x = float(rand() % 20);
-				instance.position.y = float(rand() % 20);
-				instance.position.z = float(rand() % 20);
-				instances.push_back(instance);
-				posX += 3;
-			}
-
-			D3D11_BUFFER_DESC instanceDesc;
-			instanceDesc.Usage = D3D11_USAGE_DEFAULT;
-			instanceDesc.ByteWidth = sizeof(INSTANCE) * instances.size();
-			instanceDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			instanceDesc.CPUAccessFlags = 0;
-			instanceDesc.MiscFlags = 0;
-			instanceDesc.StructureByteStride = 0;
-
-			D3D11_SUBRESOURCE_DATA instanceSubresource;
-			instanceSubresource.pSysMem = instances.data();
-			instanceSubresource.SysMemPitch = 0;
-			instanceSubresource.SysMemSlicePitch = 0;
-
-			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&instanceDesc, &instanceSubresource, &m_scene.models[0].m_instanceBuffer));
 		}
 	});
 
@@ -739,6 +718,122 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[2].m_indexBuffer));
+		}
+	});
+
+	auto createFloor = (createPSTask && createVSTask).then([this]()
+	{
+		std::vector<VertexPositionUVNormal> verts;
+		std::vector<unsigned int> inds;
+
+		if (LoadObject("Assets/CobbleStones.obj", verts, inds))
+		{
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/CobbleStones.dds", nullptr, &m_scene.models[3].m_texture));
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VertexPositionUVNormal) * verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &m_scene.models[3].m_vertexBuffer));
+
+			m_scene.models[3].m_indexCount = inds.size();
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = inds.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[3].m_indexBuffer));
+
+			m_scene.models[3].m_instantiate = true;
+			m_scene.models[3].m_instanceCount = 25;
+
+			std::vector<INSTANCE> instances;
+			float posX = 0;
+			float posZ = 0;
+			for(size_t x = 0; x < 5; ++x)
+			{
+				for (size_t z = 0; z < 5; ++z)
+				{
+					INSTANCE instance;
+					instance.position = XMFLOAT3(posX, 0, posZ);
+					instances.push_back(instance);
+					posZ += 9.0f;
+				}
+				posZ = 0.0f;
+				posX += 9.0f;
+			}
+
+			D3D11_BUFFER_DESC instanceDesc;
+			instanceDesc.Usage = D3D11_USAGE_DEFAULT;
+			instanceDesc.ByteWidth = sizeof(INSTANCE) * instances.size();
+			instanceDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			instanceDesc.CPUAccessFlags = 0;
+			instanceDesc.MiscFlags = 0;
+			instanceDesc.StructureByteStride = 0;
+
+			D3D11_SUBRESOURCE_DATA instanceSubresource;
+			instanceSubresource.pSysMem = instances.data();
+			instanceSubresource.SysMemPitch = 0;
+			instanceSubresource.SysMemSlicePitch = 0;
+
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&instanceDesc, &instanceSubresource, &m_scene.models[3].m_instanceBuffer));
+		}
+	});
+
+	auto createMedievalHouse = (createPSTask && createVSTask).then([this]()
+	{
+		std::vector<VertexPositionUVNormal> verts;
+		std::vector<unsigned int> inds;
+
+		if (LoadObject("Assets/Medieval_House.obj", verts, inds, 20))
+		{
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Medieval_House.dds", nullptr, &m_scene.models[4].m_texture));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Medieval_House_normal.dds", nullptr, &m_scene.models[4].m_textureNormal));
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VertexPositionUVNormal) * verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &m_scene.models[4].m_vertexBuffer));
+
+			m_scene.models[4].m_indexCount = inds.size();
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = inds.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[4].m_indexBuffer));
+		}
+	});
+
+	auto createTree = (createPSTask && createVSTask).then([this]()
+	{
+		std::vector<VertexPositionUVNormal> verts;
+		std::vector<unsigned int> inds;
+
+		if (LoadObject("Assets/tree.obj", verts, inds))
+		{
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/tree.dds", nullptr, &m_scene.models[5].m_texture));
+
+			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
+			vertexBufferData.pSysMem = verts.data();
+			vertexBufferData.SysMemPitch = 0;
+			vertexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC vertexBufferDesc(sizeof(VertexPositionUVNormal) * verts.size(), D3D11_BIND_VERTEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &m_scene.models[5].m_vertexBuffer));
+
+			m_scene.models[5].m_indexCount = inds.size();
+
+			D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
+			indexBufferData.pSysMem = inds.data();
+			indexBufferData.SysMemPitch = 0;
+			indexBufferData.SysMemSlicePitch = 0;
+			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[5].m_indexBuffer));
 		}
 	});
 
@@ -824,6 +919,7 @@ void Sample3DSceneRenderer::DrawScene(void)
 	float blendFac[] = { 1, 1, 1, 1 };
 	context->OMSetBlendState(m_scene.blendState.Get(), blendFac, 0xFFFFFFFF);
 
+	// Light mapping
 	D3D11_MAPPED_SUBRESOURCE mappedSubresource;
 	m_deviceResources->GetD3DDeviceContext()->Map(m_scene.lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
 	LIGHT *light;
@@ -834,6 +930,7 @@ void Sample3DSceneRenderer::DrawScene(void)
 	m_deviceResources->GetD3DDeviceContext()->Unmap(m_scene.lightBuffer, 0);
 	m_deviceResources->GetD3DDeviceContext()->PSSetConstantBuffers(0, 1, &m_scene.lightBuffer);
 
+	// Models renderer
 	for (size_t i = 0; i < m_scene.models.size(); ++i)
 	{
 		ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.models[i].m_texture, m_scene.models[i].m_textureNormal };
@@ -881,6 +978,7 @@ void Sample3DSceneRenderer::DrawScene(void)
 		}
 	}
 
+	// Skybox renderer
 	ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.skybox.m_texture };
 	context->PSSetShaderResources(0, 1, shaderResourceView);
 

@@ -86,25 +86,7 @@
     <Image Include="Assets\StoreLogo.png">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\Nebula.dds">
-      <Filter>Assets</Filter>
-    </Image>
     <Image Include="Assets\Starfield.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Earth.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Mars.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Sun.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Mercury.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\Venus.dds">
       <Filter>Assets</Filter>
     </Image>
     <Image Include="Assets\katarina.dds">
@@ -128,6 +110,21 @@
     <Image Include="Assets\Crate.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\CobbleStones.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Medieval_House.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Medieval_House_normal.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\Medieval_Cart.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\tree.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -135,9 +132,6 @@
   <ItemGroup>
     <None Include="Project_TemporaryKey.pfx" />
     <None Include="Assets\SkyboxOcean.dds">
-      <Filter>Assets</Filter>
-    </None>
-    <None Include="Assets\Planet.obj">
       <Filter>Assets</Filter>
     </None>
     <None Include="Assets\katarina.obj">
@@ -152,6 +146,10 @@
     <None Include="Assets\cathedral\cathedral.obj">
       <Filter>Assets\cathedral</Filter>
     </None>
+    <None Include="Assets\Crate.obj" />
+    <None Include="Assets\CobbleStones.obj" />
+    <None Include="Assets\Medieval_House.obj" />
+    <None Include="Assets\Medieval_Cart.obj" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\ModelVertexShader.hlsl">
@@ -177,7 +175,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <Object Include="Assets\Crate.obj">
+    <Object Include="Assets\tree.obj">
       <Filter>Assets</Filter>
     </Object>
   </ItemGroup>
