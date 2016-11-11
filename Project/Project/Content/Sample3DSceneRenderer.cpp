@@ -158,7 +158,7 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 		// Rotate Light
 		float radius = 7.0f;
 		float offset = 0;
-		XMFLOAT4 lightPos = XMFLOAT4(std::sin(totalRotation + offset) * radius, 7.0f, std::cos(totalRotation + offset) * radius, 1.0f);
+		XMFLOAT4 lightPos = XMFLOAT4(std::sin((float)totalRotation + offset) * radius, 7.0f, std::cos((float)totalRotation + offset) * radius, 1.0f);
 		XMVECTOR lightDir = XMVectorSet(-lightPos.x, -lightPos.y, -lightPos.z, 1.0f);
 		lightDir = XMVector3Normalize(lightDir);
 		XMStoreFloat4(&m_lightDirection, lightDir);
@@ -861,7 +861,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 
 			1,5,0, // -y
 			5,4,0,
-
+			
 			6,7,2, // +y
 			7,3,2,
 

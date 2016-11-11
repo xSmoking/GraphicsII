@@ -119,9 +119,6 @@
     <Image Include="Assets\Medieval_House_normal.dds">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\Medieval_Cart.dds">
-      <Filter>Assets</Filter>
-    </Image>
     <Image Include="Assets\tree.dds">
       <Filter>Assets</Filter>
     </Image>
@@ -146,10 +143,18 @@
     <None Include="Assets\cathedral\cathedral.obj">
       <Filter>Assets\cathedral</Filter>
     </None>
-    <None Include="Assets\Crate.obj" />
-    <None Include="Assets\CobbleStones.obj" />
-    <None Include="Assets\Medieval_House.obj" />
-    <None Include="Assets\Medieval_Cart.obj" />
+    <None Include="Assets\tree.obj">
+      <Filter>Assets</Filter>
+    </None>
+    <None Include="Assets\Crate.obj">
+      <Filter>Assets</Filter>
+    </None>
+    <None Include="Assets\CobbleStones.obj">
+      <Filter>Assets</Filter>
+    </None>
+    <None Include="Assets\Medieval_House.obj">
+      <Filter>Assets</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\ModelVertexShader.hlsl">
@@ -173,10 +178,5 @@
     <FxCompile Include="Content\SpotLightPixelShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Object Include="Assets\tree.obj">
-      <Filter>Assets</Filter>
-    </Object>
   </ItemGroup>
 </Project>
