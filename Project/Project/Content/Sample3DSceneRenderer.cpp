@@ -116,25 +116,6 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources(void)
 	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixLookAtLH(eye2, at2, up2)));
 }
 
-XMFLOAT4 MatrixByVector(XMFLOAT4X4 matrix, XMFLOAT4 vector)
-{
-	XMFLOAT4 out;
-	out.x = matrix._11 * vector.x + matrix._12 * vector.y + matrix._13 * vector.z + matrix._14 * vector.w;
-	out.y = matrix._21 * vector.x + matrix._22 * vector.y + matrix._23 * vector.z + matrix._24 * vector.w;
-	out.z = matrix._31 * vector.x + matrix._32 * vector.y + matrix._33 * vector.z + matrix._34 * vector.w;
-	out.w = matrix._41 * vector.x + matrix._42 * vector.y + matrix._43 * vector.z + matrix._44 * vector.w;
-	return out;
-}
-
-XMFLOAT4 MatrixByVector(XMFLOAT4X4 matrix, XMFLOAT3 vector)
-{
-	XMFLOAT4 out;
-	out.x = matrix._11 * vector.x + matrix._12 * vector.y + matrix._13 * vector.z;
-	out.y = matrix._21 * vector.x + matrix._22 * vector.y + matrix._23 * vector.z;
-	out.z = matrix._31 * vector.x + matrix._32 * vector.y + matrix._33 * vector.z;
-	return out;
-}
-
 XMFLOAT4 LookAt(XMFLOAT4 position, XMFLOAT4 look)
 {
 	XMFLOAT4 out;
@@ -256,6 +237,10 @@ void Sample3DSceneRenderer::UpdateCamera(XMFLOAT4X4 camera, DX::StepTimer const&
 	if (m_kbuttons['3'])
 	{
 		m_scene.lightType = 3;
+	}
+	if(m_kbuttons['4'])
+	{
+		m_scene.lightType = 4;
 	}
 
 	if (m_currMousePos)
@@ -675,6 +660,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		if (LoadObject("Assets/ahri.obj", verts, inds, 30))
 		{
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/ahri.dds", nullptr, &m_scene.models[1].m_texture));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/ahri_normal.dds", nullptr, &m_scene.models[1].m_textureNormal));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -729,6 +715,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		if (LoadObject("Assets/CobbleStones.obj", verts, inds))
 		{
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/CobbleStones.dds", nullptr, &m_scene.models[3].m_texture));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/CobbleStones_normal.dds", nullptr, &m_scene.models[3].m_textureNormal));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -818,6 +805,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		if (LoadObject("Assets/tree.obj", verts, inds))
 		{
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/tree.dds", nullptr, &m_scene.models[5].m_texture));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/tree_normal.dds", nullptr, &m_scene.models[5].m_textureNormal));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -929,6 +917,16 @@ void Sample3DSceneRenderer::DrawScene(void)
 	light->coneDirection = XMFLOAT4(-1, 3.0f, 1.0f, 0.8f);
 	m_deviceResources->GetD3DDeviceContext()->Unmap(m_scene.lightBuffer, 0);
 	m_deviceResources->GetD3DDeviceContext()->PSSetConstantBuffers(0, 1, &m_scene.lightBuffer);
+
+	//D3D11_MAPPED_SUBRESOURCE mappedSubresource2;
+	//m_deviceResources->GetD3DDeviceContext()->Map(m_scene.lightBuffer2, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource2);
+	//LIGHT *light2;
+	//light2 = (LIGHT*)mappedSubresource2.pData;
+	//light2->position = XMFLOAT4(0, 0, 0, 4.0f);
+	//light2->color = XMFLOAT4(1, 1, 1, 0);
+	//light2->coneDirection = XMFLOAT4(-1, 3.0f, 1.0f, 0.8f);
+	//m_deviceResources->GetD3DDeviceContext()->Unmap(m_scene.lightBuffer2, 0);
+	//m_deviceResources->GetD3DDeviceContext()->PSSetConstantBuffers(0, 1, &m_scene.lightBuffer2);
 
 	// Models renderer
 	for (size_t i = 0; i < m_scene.models.size(); ++i)

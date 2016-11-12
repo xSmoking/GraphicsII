@@ -62,9 +62,6 @@
     <Image Include="Assets\Wide310x150Logo.scale-200.png">
       <Filter>Assets</Filter>
     </Image>
-    <Filter Include="Assets\cathedral">
-      <UniqueIdentifier>{3d3ca1b7-b979-413b-bc56-a48ba5eeeab3}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
@@ -98,9 +95,6 @@
     <Image Include="Assets\ahri.dds">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\cathedral\floor.dds">
-      <Filter>Assets\cathedral</Filter>
-    </Image>
     <Image Include="Assets\katarina_normal.dds">
       <Filter>Assets</Filter>
     </Image>
@@ -122,6 +116,15 @@
     <Image Include="Assets\tree.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\ahri_normal.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\CobbleStones_normal.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\tree_normal.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -136,12 +139,6 @@
     </None>
     <None Include="Assets\ahri.obj">
       <Filter>Assets</Filter>
-    </None>
-    <None Include="Assets\cathedral\floor.obj">
-      <Filter>Assets\cathedral</Filter>
-    </None>
-    <None Include="Assets\cathedral\cathedral.obj">
-      <Filter>Assets\cathedral</Filter>
     </None>
     <None Include="Assets\tree.obj">
       <Filter>Assets</Filter>

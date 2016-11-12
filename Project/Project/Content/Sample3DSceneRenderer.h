@@ -101,6 +101,7 @@ namespace DX11UWA
 			std::vector<D3D11_VIEWPORT>					viewports;
 			float										lightType;
 			ID3D11Buffer								*lightBuffer;
+			ID3D11Buffer								*lightBuffer2;
 			std::vector<DirectX::XMFLOAT4X4>			camera;
 			Microsoft::WRL::ComPtr<ID3D11BlendState>	blendState;
 		};
