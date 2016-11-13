@@ -57,7 +57,7 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	MODEL Katarina, Ahri, Crate, Floor, MedievalHouse, Tree;
 	Katarina.m_position = XMFLOAT3(-1.0f, 0.5f, 0);
 	Ahri.m_position = XMFLOAT3(6.0f, 0.5f, 2.0f);
-	Crate.m_position = XMFLOAT3(3.0f, 1.5f, 0.5f);
+	Crate.m_position = XMFLOAT3(10.0f, 1.5f, 0);
 	MedievalHouse.m_position = XMFLOAT3(5.0f, 0.5f, 29.0f);
 	Tree.m_position = XMFLOAT3(20.0f, 0, 35.0f);
 	m_scene.models.push_back(Katarina);
@@ -586,6 +586,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	auto loadPSModel = DX::ReadDataAsync(L"ModelPixelShader.cso"); // MOdel Pixel Shader
 	auto loadVSSkyboxTask = DX::ReadDataAsync(L"SkyboxVertexShader.cso"); // Skybox Vertex Shader
 	auto loadPSSkyboxTask = DX::ReadDataAsync(L"SkyboxPixelShader.cso"); // Skybox Pixel Shader
+	auto loadGSTask = DX::ReadDataAsync(L"GeometryShader.cso"); // Skybox Pixel Shader
 
 	auto createVSModel = loadVSModel.then([this](const std::vector<byte>& fileData)
 	{
@@ -624,6 +625,11 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &m_scene.skybox.m_pixelShader));
 	});
 
+	auto createGSTask = loadGSTask.then([this](const std::vector<byte>& fileData)
+	{
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateGeometryShader(&fileData[0], fileData.size(), nullptr, &m_scene.geometryShader));
+	});
+
 	auto createKatarina = (createPSModel && createVSModel).then([this]()
 	{
 		std::vector<VertexPositionUVNormal> verts;
@@ -633,6 +639,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		{
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/katarina.dds", nullptr, &m_scene.models[0].m_texture));
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/katarina_normal.dds", nullptr, &m_scene.models[0].m_textureNormal));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/katarina_specular.dds", nullptr, &m_scene.models[0].m_textureSpecular));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -704,6 +711,35 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[2].m_indexBuffer));
+
+			m_scene.models[2].m_instantiate = true;
+			m_scene.models[2].m_instanceCount = 3;
+
+			std::vector<INSTANCE> instances;
+
+			float posX = 4;
+			for (size_t i = 0; i < m_scene.models[2].m_instanceCount; ++i)
+			{
+				INSTANCE instance;
+				instance.position = XMFLOAT3(posX, 0, 0);
+				instances.push_back(instance);
+				posX += 4;
+			}
+
+			D3D11_BUFFER_DESC instanceDesc;
+			instanceDesc.Usage = D3D11_USAGE_DEFAULT;
+			instanceDesc.ByteWidth = sizeof(INSTANCE) * instances.size();
+			instanceDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			instanceDesc.CPUAccessFlags = 0;
+			instanceDesc.MiscFlags = 0;
+			instanceDesc.StructureByteStride = 0;
+
+			D3D11_SUBRESOURCE_DATA instanceSubresource;
+			instanceSubresource.pSysMem = instances.data();
+			instanceSubresource.SysMemPitch = 0;
+			instanceSubresource.SysMemSlicePitch = 0;
+
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&instanceDesc, &instanceSubresource, &m_scene.models[2].m_instanceBuffer));
 		}
 	});
 
@@ -716,6 +752,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		{
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/CobbleStones.dds", nullptr, &m_scene.models[3].m_texture));
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/CobbleStones_normal.dds", nullptr, &m_scene.models[3].m_textureNormal));
+			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/CobbleStones_specular.dds", nullptr, &m_scene.models[3].m_textureSpecular));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -931,8 +968,8 @@ void Sample3DSceneRenderer::DrawScene(void)
 	// Models renderer
 	for (size_t i = 0; i < m_scene.models.size(); ++i)
 	{
-		ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.models[i].m_texture, m_scene.models[i].m_textureNormal };
-		context->PSSetShaderResources(1, 2, shaderResourceView);
+		ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.models[i].m_texture, m_scene.models[i].m_textureNormal, m_scene.models[i].m_textureSpecular };
+		context->PSSetShaderResources(1, 3, shaderResourceView);
 
 		m_scene.models[i].m_constantBufferData.view = m_constantBufferData.view;
 		m_scene.models[i].m_constantBufferData.projection = m_constantBufferData.projection;
@@ -948,6 +985,7 @@ void Sample3DSceneRenderer::DrawScene(void)
 		context->VSSetShader(m_scene.vertexShader.Get(), nullptr, 0);
 		context->VSSetConstantBuffers1(0, 1, m_scene.constantBuffer.GetAddressOf(), nullptr, nullptr);
 		context->PSSetShader(m_scene.pixelShader.Get(), nullptr, 0);
+		//context->GSSetShader(m_scene.geometryShader.Get(), nullptr, 0);
 
 		if (m_scene.models[i].m_render)
 			context->DrawIndexed(m_scene.models[i].m_indexCount, 0, 0);

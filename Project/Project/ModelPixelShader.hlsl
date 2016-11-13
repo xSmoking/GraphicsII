@@ -14,16 +14,21 @@ cbuffer LIGHT
 
 texture2D env : register(t1);
 texture2D envNormal : register(t2);
+texture2D envSpecular : register(t3);
 SamplerState envFilter : register(s1);
 
 float4 main(PixelShaderInput input) : SV_TARGET
 {
-	float4 surfaceColor = env.Sample(envFilter, input.color);
+	float4 surfaceColor = env.Sample(envFilter, input.color) * (0.8f, 0.8f, 0.8f, 1);
 	float alpha = surfaceColor.w;
 	float4 result = surfaceColor;
 	
 	float4 normalColor = envNormal.Sample(envFilter, input.color);
 	input.normal = float4(normalize(input.normal.xyz - normalColor.xyz), 1);
+
+	//float4 specularColor = envSpecular.Sample(envFilter, input.color);
+	//float4 halfVector = position - input.pos;
+	//input.normal = max(clamp(dot(input.normal.xyz, normalize(position)), 0, 1) * 32, 0);
 
 	if (position.w == 1) // Direction Light
 	{

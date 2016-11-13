@@ -125,6 +125,12 @@
     <Image Include="Assets\tree_normal.dds">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="Assets\CobbleStones_specular.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\katarina_specular.dds">
+      <Filter>Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -166,13 +172,7 @@
     <FxCompile Include="SkyboxPixelShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
-    <FxCompile Include="Content\DirectionalLightPixelShader.hlsl">
-      <Filter>Content</Filter>
-    </FxCompile>
-    <FxCompile Include="Content\PointLightPixelShader.hlsl">
-      <Filter>Content</Filter>
-    </FxCompile>
-    <FxCompile Include="Content\SpotLightPixelShader.hlsl">
+    <FxCompile Include="GeometryShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
   </ItemGroup>

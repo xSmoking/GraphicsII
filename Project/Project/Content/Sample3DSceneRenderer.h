@@ -63,6 +63,7 @@ namespace DX11UWA
 			Microsoft::WRL::ComPtr<ID3D11Buffer>	m_indexBuffer;
 			CComPtr<ID3D11ShaderResourceView>		m_texture;
 			CComPtr<ID3D11ShaderResourceView>		m_textureNormal;
+			CComPtr<ID3D11ShaderResourceView>		m_textureSpecular;
 			uint32									m_indexCount;
 			DirectX::XMFLOAT3						m_position;
 			bool									m_render;
@@ -92,18 +93,19 @@ namespace DX11UWA
 
 		struct SCENE
 		{
-			std::vector<MODEL>							models;
-			SKYBOX										skybox;
-			Microsoft::WRL::ComPtr<ID3D11InputLayout>	inputLayout;
-			Microsoft::WRL::ComPtr<ID3D11VertexShader>	vertexShader;
-			Microsoft::WRL::ComPtr<ID3D11PixelShader>	pixelShader;
-			Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
-			std::vector<D3D11_VIEWPORT>					viewports;
-			float										lightType;
-			ID3D11Buffer								*lightBuffer;
-			ID3D11Buffer								*lightBuffer2;
-			std::vector<DirectX::XMFLOAT4X4>			camera;
-			Microsoft::WRL::ComPtr<ID3D11BlendState>	blendState;
+			std::vector<MODEL>								models;
+			SKYBOX											skybox;
+			Microsoft::WRL::ComPtr<ID3D11InputLayout>		inputLayout;
+			Microsoft::WRL::ComPtr<ID3D11VertexShader>		vertexShader;
+			Microsoft::WRL::ComPtr<ID3D11PixelShader>		pixelShader;
+			Microsoft::WRL::ComPtr<ID3D11GeometryShader>	geometryShader;
+			Microsoft::WRL::ComPtr<ID3D11Buffer>			constantBuffer;
+			std::vector<D3D11_VIEWPORT>						viewports;
+			float											lightType;
+			ID3D11Buffer									*lightBuffer;
+			ID3D11Buffer									*lightBuffer2;
+			std::vector<DirectX::XMFLOAT4X4>				camera;
+			Microsoft::WRL::ComPtr<ID3D11BlendState>		blendState;
 		};
 		SCENE m_scene;
 		
