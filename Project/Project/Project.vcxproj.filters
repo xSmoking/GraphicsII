@@ -175,5 +175,8 @@
     <FxCompile Include="GeometryShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
+    <FxCompile Include="HullShader.hlsl">
+      <Filter>Content</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

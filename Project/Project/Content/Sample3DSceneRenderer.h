@@ -82,7 +82,6 @@ namespace DX11UWA
 		struct SKYBOX
 		{
 			ModelViewProjectionConstantBuffer			m_constantBufferData;
-			ModelViewProjectionConstantBuffer			m_constantBufferData2;
 			Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
 			Microsoft::WRL::ComPtr<ID3D11Buffer>		m_indexBuffer;
 			CComPtr<ID3D11ShaderResourceView>			m_texture;
@@ -98,7 +97,6 @@ namespace DX11UWA
 			Microsoft::WRL::ComPtr<ID3D11InputLayout>		inputLayout;
 			Microsoft::WRL::ComPtr<ID3D11VertexShader>		vertexShader;
 			Microsoft::WRL::ComPtr<ID3D11PixelShader>		pixelShader;
-			Microsoft::WRL::ComPtr<ID3D11GeometryShader>	geometryShader;
 			Microsoft::WRL::ComPtr<ID3D11Buffer>			constantBuffer;
 			std::vector<D3D11_VIEWPORT>						viewports;
 			float											lightType;
@@ -108,6 +106,13 @@ namespace DX11UWA
 			Microsoft::WRL::ComPtr<ID3D11BlendState>		blendState;
 		};
 		SCENE m_scene;
+
+		// Geometry Stuff
+		Microsoft::WRL::ComPtr<ID3D11GeometryShader>	geometryShader;
+		Microsoft::WRL::ComPtr<ID3D11VertexShader>		geometryVShader;
+		ModelViewProjectionConstantBuffer				geometryConstantBufferData;
+		Microsoft::WRL::ComPtr<ID3D11Buffer>			geometryVertexBuffer;
+
 		
 		// CUBE
 		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayout;

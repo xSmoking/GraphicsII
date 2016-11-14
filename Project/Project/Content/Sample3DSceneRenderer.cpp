@@ -102,14 +102,14 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources(void)
 	XMStoreFloat4x4(&m_constantBufferData.projection, XMMatrixTranspose(perspectiveMatrix * orientationMatrix));
 
 	// Eye is at (0,0.7,1.5), looking at point (0,-0.1,0) with the up-vector along the y-axis.
-	static const XMVECTORF32 eye = { 0.0f, 0.7f, -1.5f, 0.0f };
-	static const XMVECTORF32 at = { 0.0f, -0.1f, 0.0f, 0.0f };
+	static const XMVECTORF32 eye = { 0.0f, 4.0f, -1.5f, 0.0f };
+	static const XMVECTORF32 at = { 4.0f, 1.0f, 4.0f, 0.0f };
 	static const XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
 	XMStoreFloat4x4(&m_scene.camera[0], XMMatrixInverse(nullptr, XMMatrixLookAtLH(eye, at, up)));
 
-	static const XMVECTORF32 eye2 = { 0.0f, 7.0f, -1.5f, 0.0f };
-	static const XMVECTORF32 at2 = { 0.0f, -0.1f, 0.0f, 0.0f };
-	static const XMVECTORF32 up2 = { 0.0f, 1.0f, 0.0f, 0.0f };
+	static const XMVECTORF32 eye2 = { -2.0f, 7.0f, -1.5f, 0.0f };
+	static const XMVECTORF32 at2 = { 3.0f, 2.0f, 3.0f, 0.0f };
+	static const XMVECTORF32 up2 = { 0.0f, 3.0f, 0.0f, 0.0f };
 	XMStoreFloat4x4(&m_scene.camera[1], XMMatrixInverse(nullptr, XMMatrixLookAtLH(eye2, at2, up2)));
 
 	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixLookAtLH(eye, at, up)));
@@ -152,6 +152,7 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 	TranslateAndRotate(m_scene.models[4].m_constantBufferData, m_scene.models[4].m_position, 3.05433f);
 	Translate(m_scene.models[5].m_constantBufferData, m_scene.models[5].m_position);
 
+	Translate(geometryConstantBufferData, XMFLOAT3(0, 0, 0));
 	StaticSkybox(m_scene.skybox.m_constantBufferData, XMFLOAT3(m_scene.camera[0]._41, m_scene.camera[0]._42, m_scene.camera[0]._43));
 
 	// Update or move camera here
@@ -347,6 +348,13 @@ void Sample3DSceneRenderer::Render(void)
 	}
 
 	auto context = m_deviceResources->GetD3DDeviceContext();
+
+	m_scene.viewports[0].Width = m_deviceResources->GetOutputSize().Width / 2;
+	m_scene.viewports[0].Height = m_deviceResources->GetOutputSize().Height;
+
+	m_scene.viewports[1].Width = m_deviceResources->GetOutputSize().Width / 2;
+	m_scene.viewports[1].Height = m_deviceResources->GetOutputSize().Height;
+	m_scene.viewports[1].TopLeftX = m_deviceResources->GetOutputSize().Width / 2;
 
 	for(size_t camera = 0; camera < m_scene.camera.size(); ++camera)
 	{
@@ -586,7 +594,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	auto loadPSModel = DX::ReadDataAsync(L"ModelPixelShader.cso"); // MOdel Pixel Shader
 	auto loadVSSkyboxTask = DX::ReadDataAsync(L"SkyboxVertexShader.cso"); // Skybox Vertex Shader
 	auto loadPSSkyboxTask = DX::ReadDataAsync(L"SkyboxPixelShader.cso"); // Skybox Pixel Shader
-	auto loadGSTask = DX::ReadDataAsync(L"GeometryShader.cso"); // Skybox Pixel Shader
+	auto loadGSTask = DX::ReadDataAsync(L"GeometryShader.cso"); // Geometry Shader
 
 	auto createVSModel = loadVSModel.then([this](const std::vector<byte>& fileData)
 	{
@@ -627,7 +635,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 
 	auto createGSTask = loadGSTask.then([this](const std::vector<byte>& fileData)
 	{
-		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateGeometryShader(&fileData[0], fileData.size(), nullptr, &m_scene.geometryShader));
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateGeometryShader(&fileData[0], fileData.size(), nullptr, &geometryShader));
 	});
 
 	auto createKatarina = (createPSModel && createVSModel).then([this]()
@@ -695,6 +703,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		if (LoadObject("Assets/Crate.obj", verts, inds))
 		{
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/TransparentGreen.dds", nullptr, &m_scene.models[2].m_texture));
+			//DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Crate.dds", nullptr, &m_scene.models[2].m_texture));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -941,8 +950,8 @@ void Sample3DSceneRenderer::DrawScene(void)
 	//context->DrawIndexed(m_indexCount, 0, 0);
 
 	// MY STUFF
-	float blendFac[] = { 1, 1, 1, 1 };
-	context->OMSetBlendState(m_scene.blendState.Get(), blendFac, 0xFFFFFFFF);
+	float blendFac[4] = { 1, 1, 1, 1 };
+	context->OMSetBlendState(m_scene.blendState.Get(), blendFac, 0xffffffff);
 
 	// Light mapping
 	D3D11_MAPPED_SUBRESOURCE mappedSubresource;
@@ -955,15 +964,25 @@ void Sample3DSceneRenderer::DrawScene(void)
 	m_deviceResources->GetD3DDeviceContext()->Unmap(m_scene.lightBuffer, 0);
 	m_deviceResources->GetD3DDeviceContext()->PSSetConstantBuffers(0, 1, &m_scene.lightBuffer);
 
-	//D3D11_MAPPED_SUBRESOURCE mappedSubresource2;
-	//m_deviceResources->GetD3DDeviceContext()->Map(m_scene.lightBuffer2, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource2);
-	//LIGHT *light2;
-	//light2 = (LIGHT*)mappedSubresource2.pData;
-	//light2->position = XMFLOAT4(0, 0, 0, 4.0f);
-	//light2->color = XMFLOAT4(1, 1, 1, 0);
-	//light2->coneDirection = XMFLOAT4(-1, 3.0f, 1.0f, 0.8f);
-	//m_deviceResources->GetD3DDeviceContext()->Unmap(m_scene.lightBuffer2, 0);
-	//m_deviceResources->GetD3DDeviceContext()->PSSetConstantBuffers(0, 1, &m_scene.lightBuffer2);
+	// Geometry renderer
+	//geometryConstantBufferData.view = m_constantBufferData.view;
+	//geometryConstantBufferData.projection = m_constantBufferData.projection;
+	//context->UpdateSubresource1(m_constantBuffer.Get(), 0, NULL, &geometryConstantBufferData, 0, 0, 0);
+
+	//stride = sizeof(VertexPositionColor);
+	//offset = 0;
+	//context->IASetVertexBuffers(0, 1, geometryVertexBuffer.GetAddressOf(), &stride, &offset);
+	//context->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+	//context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+	//context->IASetInputLayout(m_inputLayout.Get());
+
+	//context->VSSetShader(geometryVShader.Get(), nullptr, 0);
+	//context->GSSetConstantBuffers1(0, 1, m_constantBuffer.GetAddressOf(), nullptr, nullptr);
+	//context->PSSetShader(m_pixelShader.Get(), nullptr, 0);
+	//context->GSSetShader(geometryShader.Get(), nullptr, 0);
+
+	//context->Draw(1, 0);
+	//context->GSSetShader(nullptr, nullptr, 0);
 
 	// Models renderer
 	for (size_t i = 0; i < m_scene.models.size(); ++i)
@@ -985,7 +1004,6 @@ void Sample3DSceneRenderer::DrawScene(void)
 		context->VSSetShader(m_scene.vertexShader.Get(), nullptr, 0);
 		context->VSSetConstantBuffers1(0, 1, m_scene.constantBuffer.GetAddressOf(), nullptr, nullptr);
 		context->PSSetShader(m_scene.pixelShader.Get(), nullptr, 0);
-		//context->GSSetShader(m_scene.geometryShader.Get(), nullptr, 0);
 
 		if (m_scene.models[i].m_render)
 			context->DrawIndexed(m_scene.models[i].m_indexCount, 0, 0);
