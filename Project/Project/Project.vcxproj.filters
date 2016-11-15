@@ -113,22 +113,22 @@
     <Image Include="Assets\Medieval_House_normal.dds">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\tree.dds">
-      <Filter>Assets</Filter>
-    </Image>
     <Image Include="Assets\ahri_normal.dds">
       <Filter>Assets</Filter>
     </Image>
     <Image Include="Assets\CobbleStones_normal.dds">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\tree_normal.dds">
-      <Filter>Assets</Filter>
-    </Image>
     <Image Include="Assets\CobbleStones_specular.dds">
       <Filter>Assets</Filter>
     </Image>
     <Image Include="Assets\katarina_specular.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\tree.dds">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\tree_normal.dds">
       <Filter>Assets</Filter>
     </Image>
   </ItemGroup>
@@ -146,9 +146,6 @@
     <None Include="Assets\ahri.obj">
       <Filter>Assets</Filter>
     </None>
-    <None Include="Assets\tree.obj">
-      <Filter>Assets</Filter>
-    </None>
     <None Include="Assets\Crate.obj">
       <Filter>Assets</Filter>
     </None>
@@ -158,6 +155,7 @@
     <None Include="Assets\Medieval_House.obj">
       <Filter>Assets</Filter>
     </None>
+    <None Include="HullShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\ModelVertexShader.hlsl">
@@ -175,8 +173,10 @@
     <FxCompile Include="GeometryShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
-    <FxCompile Include="HullShader.hlsl">
-      <Filter>Content</Filter>
-    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="Assets\tree.obj">
+      <Filter>Assets</Filter>
+    </Object>
   </ItemGroup>
 </Project>

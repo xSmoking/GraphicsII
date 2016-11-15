@@ -594,7 +594,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 	auto loadPSModel = DX::ReadDataAsync(L"ModelPixelShader.cso"); // MOdel Pixel Shader
 	auto loadVSSkyboxTask = DX::ReadDataAsync(L"SkyboxVertexShader.cso"); // Skybox Vertex Shader
 	auto loadPSSkyboxTask = DX::ReadDataAsync(L"SkyboxPixelShader.cso"); // Skybox Pixel Shader
-	//auto loadGSTask = DX::ReadDataAsync(L"GeometryShader.cso"); // Geometry Shader
+	auto loadGSTask = DX::ReadDataAsync(L"GeometryShader.cso"); // Geometry Shader
 
 	auto createVSModel = loadVSModel.then([this](const std::vector<byte>& fileData)
 	{
@@ -633,10 +633,10 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreatePixelShader(&fileData[0], fileData.size(), nullptr, &m_scene.skybox.m_pixelShader));
 	});
 
-	//auto createGSTask = loadGSTask.then([this](const std::vector<byte>& fileData)
-	//{
-	//	DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateGeometryShader(&fileData[0], fileData.size(), nullptr, &geometryShader));
-	//});
+	auto createGSTask = loadGSTask.then([this](const std::vector<byte>& fileData)
+	{
+		DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateGeometryShader(&fileData[0], fileData.size(), nullptr, &geometryShader));
+	});
 
 	auto createKatarina = (createPSModel && createVSModel).then([this]()
 	{
@@ -961,6 +961,7 @@ void Sample3DSceneRenderer::DrawScene(void)
 	light->position = XMFLOAT4(m_lightDirection.x, m_lightDirection.y, m_lightDirection.z, m_scene.lightType);
 	light->color = XMFLOAT4(1, 1, 1, 0);
 	light->coneDirection = XMFLOAT4(-1, 3.0f, 1.0f, 0.8f);
+	light->camera = XMFLOAT4(m_scene.camera[0]._41, m_scene.camera[0]._42, m_scene.camera[0]._43, m_scene.camera[0]._44);
 	m_deviceResources->GetD3DDeviceContext()->Unmap(m_scene.lightBuffer, 0);
 	m_deviceResources->GetD3DDeviceContext()->PSSetConstantBuffers(0, 1, &m_scene.lightBuffer);
 

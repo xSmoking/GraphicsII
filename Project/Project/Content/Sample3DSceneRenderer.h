@@ -49,6 +49,7 @@ namespace DX11UWA
 			DirectX::XMFLOAT4	color;
 			DirectX::XMFLOAT4	position;
 			DirectX::XMFLOAT4	coneDirection;
+			DirectX::XMFLOAT4	camera;
 		};
 
 		struct INSTANCE
