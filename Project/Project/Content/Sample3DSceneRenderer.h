@@ -11,29 +11,6 @@ namespace DX11UWA
 	// This sample renderer instantiates a basic rendering pipeline.
 	class Sample3DSceneRenderer
 	{
-	public:
-		Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources);
-
-		bool LoadObject(const char *_path, std::vector<VertexPositionUVNormal> &_verts, std::vector<unsigned int> &_inds, const float resizeFactor);
-
-		void CreateViewports(void);
-		void CreateDeviceDependentResources(void);
-		void CreateWindowSizeDependentResources(void);
-		void ReleaseDeviceDependentResources(void);
-		void DrawScene(void);
-		void Update(DX::StepTimer const& timer);
-		void Render(void);
-		void StartTracking(void);
-		void TrackingUpdate(float positionX);
-		void StopTracking(void);
-		inline bool IsTracking(void) { return m_tracking; }
-
-		// Helper functions for keyboard and mouse input
-		void SetKeyboardButtons(const char* list);
-		void SetMousePosition(const Windows::UI::Input::PointerPoint^ pos);
-		void SetInputDeviceData(const char* kb, const Windows::UI::Input::PointerPoint^ pos);
-
-
 	private:
 		void TranslateAndRotate(ModelViewProjectionConstantBuffer &objectM, DirectX::XMFLOAT3 pos, float radians);
 		void Rotate(ModelViewProjectionConstantBuffer &objectM, float radians);
@@ -79,7 +56,7 @@ namespace DX11UWA
 				m_instantiate = false;
 			}
 		};
-		
+
 		struct SKYBOX
 		{
 			ModelViewProjectionConstantBuffer			m_constantBufferData;
@@ -114,7 +91,6 @@ namespace DX11UWA
 		ModelViewProjectionConstantBuffer				geometryConstantBufferData;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>			geometryVertexBuffer;
 
-		
 		// CUBE
 		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayout;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
@@ -138,6 +114,29 @@ namespace DX11UWA
 
 		// Light Variable
 		DirectX::XMFLOAT4 m_lightDirection;
+
+	public:
+		Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources);
+
+		bool LoadObject(const char *_path, std::vector<VertexPositionUVNormal> &_verts, std::vector<unsigned int> &_inds, const float resizeFactor);
+
+		void CreateViewports(void);
+		void CreateDeviceDependentResources(void);
+		void CreateWindowSizeDependentResources(void);
+		void ReleaseDeviceDependentResources(void);
+		void DrawScene(void);
+		void ReorderObjects(const std::vector<MODEL> _models);
+		void Update(DX::StepTimer const& timer);
+		void Render(void);
+		void StartTracking(void);
+		void TrackingUpdate(float positionX);
+		void StopTracking(void);
+		inline bool IsTracking(void) { return m_tracking; }
+
+		// Helper functions for keyboard and mouse input
+		void SetKeyboardButtons(const char* list);
+		void SetMousePosition(const Windows::UI::Input::PointerPoint^ pos);
+		void SetInputDeviceData(const char* kb, const Windows::UI::Input::PointerPoint^ pos);
 	};
 }
 

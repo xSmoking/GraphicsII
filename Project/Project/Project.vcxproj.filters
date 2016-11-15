@@ -119,12 +119,6 @@
     <Image Include="Assets\CobbleStones_normal.dds">
       <Filter>Assets</Filter>
     </Image>
-    <Image Include="Assets\CobbleStones_specular.dds">
-      <Filter>Assets</Filter>
-    </Image>
-    <Image Include="Assets\katarina_specular.dds">
-      <Filter>Assets</Filter>
-    </Image>
     <Image Include="Assets\tree.dds">
       <Filter>Assets</Filter>
     </Image>
@@ -156,6 +150,7 @@
       <Filter>Assets</Filter>
     </None>
     <None Include="HullShader.hlsl" />
+    <None Include="Assets\tree.obj" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Content\ModelVertexShader.hlsl">
@@ -173,10 +168,5 @@
     <FxCompile Include="GeometryShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Object Include="Assets\tree.obj">
-      <Filter>Assets</Filter>
-    </Object>
   </ItemGroup>
 </Project>

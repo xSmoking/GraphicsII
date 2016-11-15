@@ -34,7 +34,7 @@ float4 main(PixelShaderInput input) : SV_TARGET
 	float4 toLight = normalize(position - input.pos);
 	float4 refVec = float4(reflect(-toLight, input.normal), 1);
 	float specPow = saturate(dot(refVec, toCam));
-	specPow = pow(specPow, 128);
+	specPow = pow(specPow, 32);
 	float specIntensity = 0.5f;
 	float4 spec = color * specPow * specIntensity;
 
@@ -42,7 +42,7 @@ float4 main(PixelShaderInput input) : SV_TARGET
 
 	if (position.w == 1) // Direction Light
 	{
-		//float4 lightDir = normalize(position - input.pos);
+		//float4 lightDir = normalize(position);
 		float4 lightDir = -position;
 		float4 lightRatio = clamp(dot(-lightDir, input.normal), 0, 1);
 		result = lightRatio * color * surfaceColor;

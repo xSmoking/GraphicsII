@@ -59,7 +59,7 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 	Ahri.m_position = XMFLOAT3(6.0f, 0.5f, 2.0f);
 	Crate.m_position = XMFLOAT3(10.0f, 1.5f, 0);
 	MedievalHouse.m_position = XMFLOAT3(5.0f, 0.5f, 29.0f);
-	Tree.m_position = XMFLOAT3(20.0f, 0, 35.0f);
+	Tree.m_position = XMFLOAT3(20.0f, 0, 27.0f);
 	m_scene.models.push_back(Katarina);
 	m_scene.models.push_back(Ahri);
 	m_scene.models.push_back(Crate);
@@ -647,7 +647,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		{
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/katarina.dds", nullptr, &m_scene.models[0].m_texture));
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/katarina_normal.dds", nullptr, &m_scene.models[0].m_textureNormal));
-			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/katarina_specular.dds", nullptr, &m_scene.models[0].m_textureSpecular));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -703,7 +702,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		if (LoadObject("Assets/Crate.obj", verts, inds))
 		{
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/TransparentGreen.dds", nullptr, &m_scene.models[2].m_texture));
-			//DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/Crate.dds", nullptr, &m_scene.models[2].m_texture));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -720,35 +718,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[2].m_indexBuffer));
-
-			m_scene.models[2].m_instantiate = true;
-			m_scene.models[2].m_instanceCount = 3;
-
-			std::vector<INSTANCE> instances;
-
-			float posX = 4;
-			for (size_t i = 0; i < m_scene.models[2].m_instanceCount; ++i)
-			{
-				INSTANCE instance;
-				instance.position = XMFLOAT3(posX, 0, 0);
-				instances.push_back(instance);
-				posX += 4;
-			}
-
-			D3D11_BUFFER_DESC instanceDesc;
-			instanceDesc.Usage = D3D11_USAGE_DEFAULT;
-			instanceDesc.ByteWidth = sizeof(INSTANCE) * instances.size();
-			instanceDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			instanceDesc.CPUAccessFlags = 0;
-			instanceDesc.MiscFlags = 0;
-			instanceDesc.StructureByteStride = 0;
-
-			D3D11_SUBRESOURCE_DATA instanceSubresource;
-			instanceSubresource.pSysMem = instances.data();
-			instanceSubresource.SysMemPitch = 0;
-			instanceSubresource.SysMemSlicePitch = 0;
-
-			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&instanceDesc, &instanceSubresource, &m_scene.models[2].m_instanceBuffer));
 		}
 	});
 
@@ -761,7 +730,6 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 		{
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/CobbleStones.dds", nullptr, &m_scene.models[3].m_texture));
 			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/CobbleStones_normal.dds", nullptr, &m_scene.models[3].m_textureNormal));
-			DX::ThrowIfFailed(CreateDDSTextureFromFile(m_deviceResources->GetD3DDevice(), L"Assets/CobbleStones_specular.dds", nullptr, &m_scene.models[3].m_textureSpecular));
 
 			D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
 			vertexBufferData.pSysMem = verts.data();
@@ -780,12 +748,12 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[3].m_indexBuffer));
 
 			m_scene.models[3].m_instantiate = true;
-			m_scene.models[3].m_instanceCount = 25;
+			m_scene.models[3].m_instanceCount = 40;
 
 			std::vector<INSTANCE> instances;
 			float posX = 0;
 			float posZ = 0;
-			for(size_t x = 0; x < 5; ++x)
+			for(size_t x = 0; x < 8; ++x)
 			{
 				for (size_t z = 0; z < 5; ++z)
 				{
@@ -868,6 +836,40 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[5].m_indexBuffer));
+
+			m_scene.models[5].m_instantiate = true;
+			m_scene.models[5].m_instanceCount = 10;
+
+			std::vector<INSTANCE> instances;
+			float posX = 0;
+			float posZ = 0;
+			for (size_t x = 0; x < 5; ++x)
+			{
+				for (size_t z = 0; z < 2; ++z)
+				{
+					INSTANCE instance;
+					instance.position = XMFLOAT3(posX, 0, posZ);
+					instances.push_back(instance);
+					posZ += 9.0f;
+				}
+				posZ = 0.0f;
+				posX += 9.0f;
+			}
+
+			D3D11_BUFFER_DESC instanceDesc;
+			instanceDesc.Usage = D3D11_USAGE_DEFAULT;
+			instanceDesc.ByteWidth = sizeof(INSTANCE) * instances.size();
+			instanceDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			instanceDesc.CPUAccessFlags = 0;
+			instanceDesc.MiscFlags = 0;
+			instanceDesc.StructureByteStride = 0;
+
+			D3D11_SUBRESOURCE_DATA instanceSubresource;
+			instanceSubresource.pSysMem = instances.data();
+			instanceSubresource.SysMemPitch = 0;
+			instanceSubresource.SysMemSlicePitch = 0;
+
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&instanceDesc, &instanceSubresource, &m_scene.models[5].m_instanceBuffer));
 		}
 	});
 
@@ -988,8 +990,8 @@ void Sample3DSceneRenderer::DrawScene(void)
 	// Models renderer
 	for (size_t i = 0; i < m_scene.models.size(); ++i)
 	{
-		ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.models[i].m_texture, m_scene.models[i].m_textureNormal, m_scene.models[i].m_textureSpecular };
-		context->PSSetShaderResources(1, 3, shaderResourceView);
+		ID3D11ShaderResourceView *shaderResourceView[] = { m_scene.models[i].m_texture, m_scene.models[i].m_textureNormal };
+		context->PSSetShaderResources(1, 2, shaderResourceView);
 
 		m_scene.models[i].m_constantBufferData.view = m_constantBufferData.view;
 		m_scene.models[i].m_constantBufferData.projection = m_constantBufferData.projection;
@@ -1022,7 +1024,7 @@ void Sample3DSceneRenderer::DrawScene(void)
 			offsets[1] = 0;
 
 			bufferPointers[0] = m_scene.models[i].m_vertexBuffer;
-			bufferPointers[1] = m_scene.models[i].m_instanceBuffer;
+			bufferPointers[1] = m_scene.models[i].m_instanceBuffer * 0.5;
 
 			context->UpdateSubresource1(m_scene.constantBuffer.Get(), 0, NULL, &m_scene.models[i].m_constantBufferData, 0, 0, 0);
 			context->IASetVertexBuffers(0, 2, bufferPointers->GetAddressOf(), strides, offsets);
@@ -1055,6 +1057,11 @@ void Sample3DSceneRenderer::DrawScene(void)
 	context->PSSetShader(m_scene.skybox.m_pixelShader.Get(), nullptr, 0);
 
 	context->DrawIndexed(m_scene.skybox.m_indexCount, 0, 0);
+}
+
+void Sample3DSceneRenderer::ReorderObjects(const std::vector<MODEL> _models)
+{
+	
 }
 
 void Sample3DSceneRenderer::ReleaseDeviceDependentResources(void)
