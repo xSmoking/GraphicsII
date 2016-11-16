@@ -1024,7 +1024,7 @@ void Sample3DSceneRenderer::DrawScene(void)
 			offsets[1] = 0;
 
 			bufferPointers[0] = m_scene.models[i].m_vertexBuffer;
-			bufferPointers[1] = m_scene.models[i].m_instanceBuffer * 0.5;
+			bufferPointers[1] = m_scene.models[i].m_instanceBuffer;
 
 			context->UpdateSubresource1(m_scene.constantBuffer.Get(), 0, NULL, &m_scene.models[i].m_constantBufferData, 0, 0, 0);
 			context->IASetVertexBuffers(0, 2, bufferPointers->GetAddressOf(), strides, offsets);
