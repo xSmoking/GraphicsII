@@ -3,14 +3,15 @@ struct PixelShaderInput
 	float4 pos : SV_POSITION;
 	float3 color : COLOR;
 	float3 normal : NORMAL;
+	float4 world : WORLD;
 };
 
 cbuffer LIGHT
 {
 	float4				color;
 	float4				position;
+	float4				direction;
 	float4				coneDirection;
-	//vector<float, 4>	camera;
 	float4	camera;
 };
 
@@ -27,45 +28,48 @@ float4 main(PixelShaderInput input) : SV_TARGET
 
 	// Normal texture
 	float4 normalColor = envNormal.Sample(envFilter, input.color);
-	input.normal = float4(normalize(input.normal.xyz - normalColor.xyz), 1);
+	input.normal = float4(normalize(input.normal.xyz), 1);
+	// End normal
 
 	// Speceular texture
-	float4 toCam = normalize(camera - input.pos);
-	float4 toLight = normalize(position - input.pos);
-	float4 refVec = float4(reflect(-toLight, input.normal), 1);
-	float specPow = saturate(dot(refVec, toCam));
-	specPow = pow(specPow, 32);
+	float3 toCam = normalize(camera.xyz - input.world.xyz);
+
+	float3 toLight = 0;
+	if(position.w == 1)
+		toLight = normalize(-direction.xyz - input.world.xyz);
+	else
+		toLight = normalize(position.xyz - input.world.xyz);
+
+	float3 refVec = float3(reflect(-toLight.xyz, input.normal.xyz));
+	float specPow = saturate(dot(normalize(refVec), toCam));
+	specPow = pow(specPow, 256);
 	float specIntensity = 0.5f;
 	float4 spec = color * specPow * specIntensity;
 
-	result = result + spec;
+	// End specular
 
 	if (position.w == 1) // Direction Light
 	{
-		//float4 lightDir = normalize(position);
-		float4 lightDir = -position;
-		float4 lightRatio = clamp(dot(-lightDir, input.normal), 0, 1);
+		float lightRatio = saturate(dot(normalize(-direction.xyz), input.normal.xyz));
 		result = lightRatio * color * surfaceColor;
 		result = result + spec;
 	}
 
 	if (position.w == 2) // Point Light
 	{
-		//float4 lightDir = normalize(position - input.pos);
-		float4 lightDir = -position;
-		float4 lightRatio = clamp(dot(lightDir, input.normal), 0, 1);
+		float3 lightDir = normalize(position.xyz - input.world.xyz);
+		float lightRatio = saturate(dot(lightDir, input.normal.xyz));
 		result = lightRatio * color * surfaceColor;
 		result = result + spec;
 	}
 
 	if (position.w == 3) // Spotlight
 	{
-		float4 lightDir = normalize(position - input.pos);
-		//float4 lightDir = -position;
-		float4 surfaceRatio = clamp(dot(-lightDir, coneDirection), 0, 1);
+		float3 lightDir = normalize(position.xyz - input.world.xyz);
+		float surfaceRatio = saturate(dot(-lightDir.xyz , coneDirection.xyz));
 
-		float4 spotFactor = (surfaceRatio > coneDirection.w) ? 1 : 0;
-		float4 lightRatio = saturate(dot(lightDir, input.normal));
+		float spotFactor = (surfaceRatio > coneDirection.w) ? 1 : 0;
+		float lightRatio = saturate(dot(lightDir.xyz, input.normal.xyz));
 		result = spotFactor * lightRatio * color * surfaceColor;
 		result = result + spec;
 	}

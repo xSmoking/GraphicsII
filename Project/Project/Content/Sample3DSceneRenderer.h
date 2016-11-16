@@ -25,6 +25,7 @@ namespace DX11UWA
 		{
 			DirectX::XMFLOAT4	color;
 			DirectX::XMFLOAT4	position;
+			DirectX::XMFLOAT4	direction;
 			DirectX::XMFLOAT4	coneDirection;
 			DirectX::XMFLOAT4	camera;
 		};
@@ -114,6 +115,7 @@ namespace DX11UWA
 
 		// Light Variable
 		DirectX::XMFLOAT4 m_lightDirection;
+		DirectX::XMFLOAT4 m_coneDirection;
 
 	public:
 		Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources);

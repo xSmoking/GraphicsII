@@ -138,18 +138,21 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 
 		// Rotate Light
 		float radius = 7.0f;
-		float offset = 0;
-		XMFLOAT4 lightPos = XMFLOAT4(std::sin((float)totalRotation + offset) * radius, 7.0f, std::cos((float)totalRotation + offset) * radius, 1.0f);
-		XMVECTOR lightDir = XMVectorSet(-lightPos.x, -lightPos.y, -lightPos.z, 1.0f);
-		lightDir = XMVector3Normalize(lightDir);
+		XMFLOAT4 lightPos = XMFLOAT4(std::sin((float)totalRotation + 90.0f) * radius, 7.0f, std::cos((float)totalRotation + 22.5f) * radius, 1.0f);
+		XMVECTOR lightDir = XMVectorSet(-lightPos.x, -lightPos.y, -lightPos.z, lightPos.w);
 		XMStoreFloat4(&m_lightDirection, lightDir);
+
+		radius = 1.0f;
+		XMFLOAT4 coneDir = XMFLOAT4(std::sin((float)totalRotation) * radius, 7.0f, std::cos((float)totalRotation) * radius, 1.0f);
+		XMVECTOR coneDir2 = XMVectorSet(-coneDir.x, -coneDir.y, -coneDir.z, coneDir.w);
+		XMStoreFloat4(&m_coneDirection, coneDir2);
 	}
 	
 	Translate(m_scene.models[0].m_constantBufferData, m_scene.models[0].m_position);
 	Translate(m_scene.models[1].m_constantBufferData, m_scene.models[1].m_position);
 	Translate(m_scene.models[2].m_constantBufferData, m_scene.models[2].m_position);
 	Translate(m_scene.models[3].m_constantBufferData, m_scene.models[3].m_position);
-	TranslateAndRotate(m_scene.models[4].m_constantBufferData, m_scene.models[4].m_position, 3.05433f);
+	Translate(m_scene.models[4].m_constantBufferData, m_scene.models[4].m_position);
 	Translate(m_scene.models[5].m_constantBufferData, m_scene.models[5].m_position);
 
 	Translate(geometryConstantBufferData, XMFLOAT3(0, 0, 0));
@@ -718,6 +721,34 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			indexBufferData.SysMemSlicePitch = 0;
 			CD3D11_BUFFER_DESC indexBufferDesc(sizeof(unsigned int) * inds.size(), D3D11_BIND_INDEX_BUFFER);
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[2].m_indexBuffer));
+
+			m_scene.models[2].m_instantiate = true;
+			m_scene.models[2].m_instanceCount = 3;
+
+			std::vector<INSTANCE> instances;
+			float posX = 4.0f;
+			for (size_t x = 0; x < m_scene.models[2].m_instanceCount; ++x)
+			{
+				INSTANCE instance;
+				instance.position = XMFLOAT3(posX, 0, 0);
+				instances.push_back(instance);
+				posX += 4.0f;
+			}
+
+			D3D11_BUFFER_DESC instanceDesc;
+			instanceDesc.Usage = D3D11_USAGE_DEFAULT;
+			instanceDesc.ByteWidth = sizeof(INSTANCE) * instances.size();
+			instanceDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			instanceDesc.CPUAccessFlags = 0;
+			instanceDesc.MiscFlags = 0;
+			instanceDesc.StructureByteStride = 0;
+
+			D3D11_SUBRESOURCE_DATA instanceSubresource;
+			instanceSubresource.pSysMem = instances.data();
+			instanceSubresource.SysMemPitch = 0;
+			instanceSubresource.SysMemSlicePitch = 0;
+
+			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&instanceDesc, &instanceSubresource, &m_scene.models[2].m_instanceBuffer));
 		}
 	});
 
@@ -838,7 +869,7 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 			DX::ThrowIfFailed(m_deviceResources->GetD3DDevice()->CreateBuffer(&indexBufferDesc, &indexBufferData, &m_scene.models[5].m_indexBuffer));
 
 			m_scene.models[5].m_instantiate = true;
-			m_scene.models[5].m_instanceCount = 10;
+			m_scene.models[5].m_instanceCount = 11;
 
 			std::vector<INSTANCE> instances;
 			float posX = 0;
@@ -855,6 +886,10 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources(void)
 				posZ = 0.0f;
 				posX += 9.0f;
 			}
+
+			INSTANCE instancee;
+			instancee.position = XMFLOAT3(10.0f, 0.5f, -26.0f);
+			instances.push_back(instancee);
 
 			D3D11_BUFFER_DESC instanceDesc;
 			instanceDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -960,9 +995,26 @@ void Sample3DSceneRenderer::DrawScene(void)
 	m_deviceResources->GetD3DDeviceContext()->Map(m_scene.lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
 	LIGHT *light;
 	light = (LIGHT*)mappedSubresource.pData;
-	light->position = XMFLOAT4(m_lightDirection.x, m_lightDirection.y, m_lightDirection.z, m_scene.lightType);
 	light->color = XMFLOAT4(1, 1, 1, 0);
-	light->coneDirection = XMFLOAT4(-1, 3.0f, 1.0f, 0.8f);
+	//light->position = XMFLOAT4(m_lightDirection.x, 4.0f, 9.0f, m_scene.lightType);
+	//light->direction = XMFLOAT4(-1, -0.7f, 0, 0.8f);
+	//light->coneDirection = XMFLOAT4(-1, -1, 0, 0.8f);
+
+	if(m_scene.lightType == 1)
+	{
+		light->position = XMFLOAT4(m_lightDirection.x, 4.0f, 9.0f, m_scene.lightType);
+		light->direction = XMFLOAT4(m_lightDirection.x, m_lightDirection.y, m_lightDirection.z, m_scene.lightType);
+	}
+	else if(m_scene.lightType == 2)
+	{
+		light->position = XMFLOAT4(m_lightDirection.x, 4.0f, 9.0f, m_scene.lightType);
+	}
+	else if(m_scene.lightType == 3)
+	{
+		light->position = XMFLOAT4(m_lightDirection.x, 4.0f, 15.0f, m_scene.lightType);
+		light->coneDirection = XMFLOAT4(m_coneDirection.x, -1, -0.1f, 0.98f);
+	}
+	
 	light->camera = XMFLOAT4(m_scene.camera[0]._41, m_scene.camera[0]._42, m_scene.camera[0]._43, m_scene.camera[0]._44);
 	m_deviceResources->GetD3DDeviceContext()->Unmap(m_scene.lightBuffer, 0);
 	m_deviceResources->GetD3DDeviceContext()->PSSetConstantBuffers(0, 1, &m_scene.lightBuffer);
